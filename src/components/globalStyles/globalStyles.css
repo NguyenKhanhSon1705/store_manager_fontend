@@ -1,43 +1,59 @@
+@import 'normalize.css';
 
+@import "react-loading-skeleton/dist/skeleton.css";
+@import "tippy.js/dist/tippy.css";
 
-@import 'react-loading-skeleton/dist/skeleton.css';
-@import 'tippy.js/dist/tippy.css';
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-:root{
-    --primary: #001F3F;
-    --primary-border:  #012850;
-    --textdark: text-gray-600;
-    --textlight: rgb(255, 255, 255);
-    --textwhite: #ffff;
-    --outlineError: #f91d1d;
-    --header-height: 70px;
-    --sidebar-with: 240px;
-    --bg-btn-edit:#CAA100;
-    --bg-btn-delete:#C13726;
-    --bg-btn-add: #16987E;
+
+.custom-menu .ant-menu-item {
+  color: rgb(194, 191, 191) !important; 
 }
 
-*{
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+.custom-menu .ant-menu-item:hover {
+  color: white !important; 
+  background-color: #1e327a !important;
+}
+.custom-menu .ant-menu{
+    background-color: #111C44 !important;
+}
+
+.custom-menu2 .ant-menu-title-content{
+  color: white !important;
+}
+
+:root {
+  --primary: #001f3f;
+  --primary-border: #012850;
+  --textdark: text-gray-600;
+  --textlight: rgb(255, 255, 255);
+  --textwhite: #ffff;
+  --outlineError: #f91d1d;
+  --header-height: 70px;
+  --sidebar-with: 240px;
+  --bg-btn-edit: #caa100;
+  --bg-btn-delete: #c13726;
+  --bg-btn-add: #16987e;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-    font-family: 'Lato', sans-serif;
-    font-size: 1.6rem;
-    line-height: 1.5;
-    text-rendering: optimizespeed;
-    overflow-y:overlay;
+  font-family: "Lato", sans-serif;
+  font-size: 1.6rem;
+  line-height: 1.5;
+  text-rendering: optimizespeed;
+  overflow-y: overlay;
 }
-#root{
-    position: relative;
+#root {
+  position: relative;
 }
-#box-container{
-    position: absolute;
-    
+#box-container {
+  position: absolute;
 }
-

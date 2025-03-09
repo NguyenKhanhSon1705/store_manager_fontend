@@ -6,18 +6,20 @@ import { Button, Form, Input } from "antd";
 import { toast } from "react-toastify";
 import {login} from '../../store/actions/authAction'
 import ROUTE_PATH from '../../routes/routesPath'
+import getAccessToken from "~/utils/functions/getAccessToken";
 const Login = () => {
-  let { loading, isLogined } = useSelector((state) => state.auth);
+  let { loading } = useSelector((state) => state.auth);
+  const getToken = getAccessToken();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const dispatch = useDispatch();
   const navigate = useNavigate();
 
-  useEffect(()=> {
-      if(isLogined){
+  useEffect(()=> {  
+      if(getToken){
         return navigate(ROUTE_PATH.shop)
       }
-  },[isLogined,navigate])
+  },[getToken,navigate])
 
   const handleSubmitCreate = () => {
     dispatch(login({ email, password }));

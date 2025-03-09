@@ -10,18 +10,20 @@ import routes from "./routes";
 
 import getShopId from "./utils/functions/getShopId";
 export default function App() {
-  const loginedCookie = Cookies.get(env.REACT_APP_LOGINED) === "true";
-  const idShop = getShopId();
   const dispatch = useDispatch();
- 
+
+  // Kiểm tra cookie khi render component
+  const loginedCookie = Cookies.get(env.REACT_APP_LOGINED) === "true";
+  const idShop = getShopId(); // Lấy idShop (nếu không thay đổi sau khi render, không cần phải cho vào phụ thuộc)
 
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      loginedCookie && idShop && dispatch(getCurrentUser(idShop));
-    }, 1000);
-
-    return () => clearTimeout(timeoutId);
-  }, [dispatch, loginedCookie, idShop]);
+    if (loginedCookie && idShop) {
+      const timeoutId = setTimeout(() => {
+        dispatch(getCurrentUser(idShop)); 
+      }, 1000);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [dispatch, loginedCookie, idShop]); 
 
   return (
     <>

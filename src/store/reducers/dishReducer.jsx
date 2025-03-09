@@ -35,6 +35,16 @@ export default function dishReducer(state = initState, action){
                 update: false
             }
         }
+        case actionTypes.UPDATE_DISH: {
+            return {
+                ...state,
+                data: {
+                    ...state.data,
+                    items: state.data.items.map(item => item.id === action.payload.data.id? action.payload.data : item)
+                },
+                update: false,
+            }
+        }
         case actionTypes.DELETE_DISH:{
             return {
                 ...state,

@@ -10,10 +10,18 @@ const initState = {
 
 export default function orderReducer(state = initState, action){
     switch (action.type){
-        case actionTypes.GET_TABLES_BY_AREA:{
+        case actionTypes.GET_INFO_CHECKOUT: {
             return {
-                data : action.payload.data,
-                loading: false
+                data: action.payload.data,
+                loading: false,
+                update: false
+            }
+        }
+        case actionTypes.PAYMENT: {
+            return {
+                data: action.payload.data,
+                loading: false,
+                update: false
             }
         }
         case actionTypes.OPEN_TABLES: {
@@ -31,6 +39,14 @@ export default function orderReducer(state = initState, action){
             }
         }
         case actionTypes.GET_INFO_DISH_CURRENT_TABLE:{
+            return {
+                state,
+                currDish : action.payload.data,
+                update: false,
+                loading: false
+            }
+        }
+        case actionTypes.CHANGE_TABLE:{
             return {
                 state,
                 currDish : action.payload.data,

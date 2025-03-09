@@ -8,10 +8,9 @@ import {
   publicRoute,
 } from "./routes";
 import ProtectRoute from "./ProtectRoute";
-import AdminProtectRoute from "./AdminProtectRoute";
-import routesAdmin from "./routesAdmin";
-import LayoutAdmin from "../layoutsAdmin/LayoutAdmin";
-
+import AdminProtectRoute from "./admin/AdminProtectRoute";
+import Admin from "~/layouts/admin";
+import routesAdmin from "./admin/routes";
 
 const routeSidebar = privateRouteSideBar.map((route) => {
   const Page = route.component;
@@ -36,6 +35,7 @@ const privateRouteDetails = privateRouteDetail.map((route) => {
     element: <Page />,
   };
 });
+
 const privateRouteNotLayouts = privateRouteNotLayout.map((route) => {
   const Page = route.component;
   return {
@@ -45,18 +45,26 @@ const privateRouteNotLayouts = privateRouteNotLayout.map((route) => {
 });
 
 // admin
-
-const privateRouteAdmin = routesAdmin.privateRoute.map((route) => {
+const routeroutesAdmins = routesAdmin.routesAdminSidebar.map((route) =>{
   const Page = route.component;
   return {
     path: route.path,
     element: <Page />,
   };
-});
+})
 
 const routes = createBrowserRouter(
   [
-   
+    {
+      element: <AdminProtectRoute />,
+      errorElement: <ErrorDetails />,
+      children: [
+        {
+          element: <Admin />,
+          children: routeroutesAdmins
+        },
+      ],
+    },
     {
       element: <ProtectRoute />,
       errorElement: <ErrorDetails />,
@@ -74,24 +82,10 @@ const routes = createBrowserRouter(
         },
       ],
     },
-     {
-      element: <AdminProtectRoute />,
-      errorElement: <ErrorDetails />,
-      children: [
-        {
-          element: <LayoutAdmin />,
-          children: privateRouteAdmin,
-        },
-      ],
-    },
-
-
     {
       children: publicRoutes,
     },
   ],
-
-  
   {
     future: {
       v7_relativeSplatPath: true,

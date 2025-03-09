@@ -13,7 +13,7 @@ import {
   Table,
 } from "antd";
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { MdOutlineDeleteSweep } from "react-icons/md";
 import { FaRegEdit } from "react-icons/fa";
 import { FaCheck } from "react-icons/fa";
@@ -34,6 +34,7 @@ import images from "../../assets/images";
 import TextArea from "antd/es/input/TextArea";
 import LoadingSyncLoader from "../../components/loading/LoadingSyncLoader";
 import TablesByArea from "./TablesByArea";
+import ROUTE_PATH from "../../routes/routesPath";
 const EditableCell = ({
   editing,
   dataIndex,
@@ -108,6 +109,7 @@ const calculateTotal = (data) => {
 const { confirm } = Modal;
 function ChooseDishForTable() {
   const [form] = Form.useForm();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
   const { table } = location.state || {};
@@ -118,7 +120,6 @@ function ChooseDishForTable() {
   const [editingKey, setEditingKey] = useState("");
   const [data, setData] = useState([]);
   const [totalPayment, setTotalPayment] = useState({});
-
   const { currDish, loading, update } = useSelector((state) => state.order);
 
   useEffect(() => {
@@ -192,10 +193,15 @@ function ChooseDishForTable() {
   const deleteRecord = (key) => {
     const newData = data.filter((item) => item.key !== key);
     setTotalPayment(calculateTotal(newData));
-
     setData(newData);
   };
   const columns = [
+    {
+      title: "STT",
+      dataIndex: "index",
+      key: "index",
+      render: (_, __, index) => index + 1,
+    },
     {
       title: "Tên món",
       dataIndex: "dish_Name",
@@ -313,10 +319,13 @@ function ChooseDishForTable() {
       cancelText: "Hủy",
       centered: true,
       onOk() {
-        // dispatch(changeTable(item))
+        console.log(totalPayment, data);
+        console.log(currDish);
+        navigate(ROUTE_PATH.CHECK_OUT, { state: { table_id: currDish?.id } });
       },
     });
   };
+
   const handleUpdate = () => {
     confirm({
       title: "Bạn chắc chắn cập nhật món ăn không?",
@@ -377,18 +386,8 @@ function ChooseDishForTable() {
       },
     });
   };
-  const handleChangeTable = () => {
+  const handleOpenChangeTable = () => {
     setOpenModalChoose(true);
-    // confirm({
-    //   title: "Bạn chắc chắn chuyển bàn này không?",
-    //   okText: "Chuyển",
-    //   okType: "primary",
-    //   cancelText: "Hủy",
-    //   centered: true,
-    //   onOk() {
-    //     // dispatch(changeTable(item))
-    //   },
-    // });
   };
 
   const handleOks = () => {
@@ -424,19 +423,39 @@ function ChooseDishForTable() {
     setIsModalVisible(false);
     setReason("");
   };
+  
+  const handleChangeTable = (table)=> {
+    if(table.isActive){
+      toast.warning("Không thể chuyển sang bàn đã tồn tại")
+    }else{ 
+      confirm({
+        title: "Bạn chắc chắn cập nhật món ăn không?",
+        okText: "cập nhật",
+        okType: "primary",
+        cancelText: "Hủy",
+        centered: true,
+        onOk() {
+          const payload = {
+            table_id_old: currDish.id,
+            table_id_new: table.id
+          };
+          dispatch(orderAction.changeTable(payload))
+          setOpenModalChoose(false)
+        },
+      });    
+    }
+  }
   return (
     <div>
       {update && <LoadingSyncLoader />}
       <Modal
-      open={openModalChoose}
-       width="75%"
-       onCancel={() => setOpenModalChoose(false)}
-       footer={null}
-
+        open={openModalChoose}
+        width="75%"
+        onCancel={() => setOpenModalChoose(false)}
+        footer={null}
       >
-        <TablesByArea />
+        <TablesByArea onClick={table => handleChangeTable(table)} />
       </Modal>
-      
       <Modal
         title="Lý do hủy bàn"
         open={isModalVisible}
@@ -468,7 +487,6 @@ function ChooseDishForTable() {
           { name: "Tạo bàn", href: "" },
         ]}
       />
-
       <div className="grid grid-cols-4 grid-rows-1 gap-5">
         <div className="col-span-3">
           <div className="flex">
@@ -513,7 +531,7 @@ function ChooseDishForTable() {
               <div className="flex">
                 <p className="font-bold">Ngày vào:&nbsp;</p>{" "}
                 {currDish?.isActive &&
-                  formatTime.dataAndYear(currDish?.timeStart)}
+                  formatTime.dateAndYear(currDish?.timeStart)}
               </div>
               <div className="flex">
                 <p className="font-bold">Giờ vào:&nbsp;</p>{" "}
@@ -554,7 +572,7 @@ function ChooseDishForTable() {
             <div>
               <Button
                 disabled={!currDish?.isActive}
-                onClick={handleChangeTable}
+                onClick={handleOpenChangeTable}
                 className="w-full bg-blue-600 text-[var(--textlight)]"
               >
                 <FaArrowsTurnRight /> Chuyển bàn

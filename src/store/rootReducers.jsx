@@ -9,7 +9,7 @@ import rolesReducer from "./reducers/rolesReducer";
 import menuGroupReducer from "./reducers/menuGroupReducer";
 import dishReducer from "./reducers/dishReducer";
 import orderReducer from "./reducers/orderReducer";
-
+import reportReducer from "./reducers/reportReducer";
 
 const rootReducer = combineReducers({
     auth: authReducer,
@@ -21,7 +21,8 @@ const rootReducer = combineReducers({
     role: rolesReducer,
     menuGroup: menuGroupReducer,
     dish: dishReducer,
-    order:orderReducer
+    order:orderReducer,
+    report: reportReducer
   });
 
 export default rootReducer

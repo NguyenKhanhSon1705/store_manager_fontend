@@ -10,7 +10,7 @@ export const getListRolesShop = () => async (dispatch) =>{
         }
     })
     try{
-        let res = await apiGetListRolesShop
+        let res = await apiGetListRolesShop()
         
         if (res?.data?.isSuccess) {
             dispatch({

@@ -6,6 +6,34 @@ import {
   apiUpdateTables,
 } from "../../services/tablesService";
 import actionTypes from "./actionTypes";
+import orderService from "~/services/orderService";
+
+export const getTablesByArea = (payload) => async (dispatch) => {
+  dispatch({
+    type: actionTypes.LOADING_TABLES,
+    payload: {
+      loading: true,
+    },
+  });
+  const res = await orderService.apiGetTablesByArea(payload);
+  if (res?.isSuccess) {
+    dispatch({
+      type: actionTypes.GET_TABLES_BY_AREA,
+      payload: {
+        data: res.data,
+      },
+    });
+  } else {
+    toast.error(res);
+    dispatch({
+      type: actionTypes.ERROR_TABLES,
+      payload: {
+        update: false,
+        loading: false,
+      },
+    });
+  }
+};
 
 export const createTables = (payload) => async (dispatch) => {
   dispatch({

@@ -35,6 +35,7 @@ function DiglogCreateUser({
     useEffect(()=>{
         dispatch(getListRolesShop())
     } , [dispatch])
+    console.log(data);
     
     return (
         <Fragment >

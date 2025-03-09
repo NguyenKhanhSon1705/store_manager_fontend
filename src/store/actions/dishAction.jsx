@@ -86,7 +86,6 @@ const getDishByMenugroup = (payload) => async (dispatch) => {
       },
     });
   } else {
-    toast.error(res);
     dispatch({
       type: actionTypes.ERROR_DISH,
       payload: {
@@ -115,7 +114,6 @@ const getDishByMenugroup = (payload) => async (dispatch) => {
       },
     });
   } else {
-    toast.error(res);
     dispatch({
       type: actionTypes.ERROR_DISH,
       payload: {
@@ -123,12 +121,54 @@ const getDishByMenugroup = (payload) => async (dispatch) => {
       },
     });
   }
- }
+ 
+}
+
+const updateDish = (payload) => async (dispatch) => {
+  dispatch({
+    type: actionTypes.LOADING_DISH,
+    payload: {
+      update: true,
+    },
+  });
+
+  try {
+    let res = await dishService.apiUpdateDish(payload);
+    if (res?.isSuccess) {
+      toast.success(res?.message);
+      dispatch({
+        type: actionTypes.UPDATE_DISH,
+        payload: {
+          update: false,
+          data: res.data,
+          id: payload.id,
+        },
+      });
+    } else {
+      dispatch({
+        type: actionTypes.ERROR_DISH,
+        payload: {
+          update: false,
+          error: res?.message || 'Update failed',
+        },
+      });
+    }
+  } catch (error) {
+    dispatch({
+      type: actionTypes.ERROR_DISH,
+      payload: {
+        update: false,
+        error: error.message || 'An error occurred',
+      },
+    });
+  }
+};
 
 const dishAction = {
   getListDish,
   createDish,
   deleteDish,
-  getDishByMenugroup
+  getDishByMenugroup,
+  updateDish
 }
 export default dishAction

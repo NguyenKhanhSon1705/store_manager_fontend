@@ -8,6 +8,13 @@ const initState = {
 }
 export default function tablesReducer(state = initState, action) {
     switch (action.type) {
+        case actionTypes.GET_TABLES_BY_AREA:{
+            return {
+                ...state,
+                data : action.payload.data,
+                loading: false
+            }
+        }
         case actionTypes.GET_LIST_TABLES: {
             return {
                 data: action.payload.data,
