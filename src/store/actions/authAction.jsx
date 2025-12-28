@@ -115,7 +115,7 @@ export const login = (payload) => async (dispatch) => {
     })
     try {
         let response = await apiLogin(payload)
-        if (response.data?.isSuccess) {
+        if (response?.data?.isSuccess) {
 
             Cookies.set(env.REACT_APP_COOKIES, response.data.data.accessToken, {
                 path: '/',
@@ -132,17 +132,19 @@ export const login = (payload) => async (dispatch) => {
                     token: response.data.data.accessToken,
                     message: response.data.message,
                     isLogined: true,
+                    isSuccess: true,
                     loading: false
                 }
             })
         } else {
-            response = response.response
-            toast.error(response?.data?.message || Object.values(response?.data?.errors)[0])
+            const errorMsg = response?.message || response?.data?.message || 'Login failed';
+            toast.error(errorMsg)
             dispatch({
                 type: actionTypes.LOGIN,
                 payload: {
                     isLogined: false,
-                    message: response?.data?.message || Object.values(response?.data?.errors)[0],
+                    message: errorMsg,
+                    isSuccess: false,
                     token: null,
                     loading: false
                 }
@@ -157,6 +159,7 @@ export const login = (payload) => async (dispatch) => {
             payload: {
                 isLogined: false,
                 message: e.message,
+                isSuccess: false,
                 loading: false
             }
         })

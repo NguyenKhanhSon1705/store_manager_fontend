@@ -1,4 +1,7 @@
 const ROUTE_PATH = {
+
+   
+
     home: '/',
     feedback: '/feedback',
     profile: '/@:nickname',
@@ -43,7 +46,9 @@ const ROUTE_PATH = {
 
     // order
     tables_by_area: '/tables-by-area',
-    choose_dish_table: '/choose-dish-table'
+    choose_dish_table: '/choose-dish-table',
+    CHECK_OUT: '/check-out',
+    PAYMENT_INFO: '/payment-info/*',
 };
 
 export default ROUTE_PATH;

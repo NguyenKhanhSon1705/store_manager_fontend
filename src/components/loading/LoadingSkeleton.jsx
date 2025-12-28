@@ -1,7 +1,7 @@
 import PropTypes from "prop-types";
 import Skeleton from "react-loading-skeleton";
 
-const LoadingSkeleton = ({height = 10 , count = 5 , highlightColor = '#b7b5b5'}) => {
+const LoadingSkeleton = ({height = 30 , count = 5 , highlightColor = '#b7b5b5'}) => {
   const props = {
     height,
     count,

@@ -1,3 +1,4 @@
+import env from "~/constants/env"
 import httpRequest from "../utils/axios"
 
 
@@ -11,11 +12,13 @@ export const apiRegister = async (payload) => {
         return response
     }
     catch (e) {
+        console.log(e)
         return e
     }
 }
 export const apiConfirmEmail = async (payload) => {
     try {
+        console.log(env.REACT_APP_BASE_URL_2);
         const response = await httpRequest.post('/api/authen/confirm-email', {
             email: payload.email,
             code: payload.code

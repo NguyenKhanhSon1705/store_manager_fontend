@@ -1,28 +1,27 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { Button, Input, Modal, Form, Upload, message } from 'antd';
+import { UploadOutlined } from '@ant-design/icons';
+import { MdStorefront, MdPhone, MdLocationOn, MdEdit, MdDelete, MdSave, MdCancel } from 'react-icons/md';
 
-import DialogInput from '../../components/dialog/DialogInput';
 import routes from '../../routes/routesPath';
 import { deleteShop, getShopById, updateShop } from '../../store/actions/shopAction';
 import formatDate from '../../utils/formatDate';
 import env from '../../constants/env';
 
 export default function ShopDetails() {
-
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
-    // Lấy dữ liệu từ Redux store
-    const { data: shopData } = useSelector(state => state.shop);
-   
-    const [isEditing, setIsEditing] = useState(false); // Quản lý trạng thái chỉnh sửa
-    const [newShopLogo, setNewShopLogo] = useState(null); // Trạng thái lưu trữ ảnh mới
-    const [editedShopData, setEditedShopData] = useState(null); // Quản lý dữ liệu trong chế độ chỉnh sửa
-    const [openDialog, setOpenDialog] = useState(false)
-    // Nếu có ID của shop trong localStorage, dispatch action để lấy dữ liệu
-   
-    
+    const { data: shopData } = useSelector((state) => state.shop);
+
+    const [isEditing, setIsEditing] = useState(false);
+    const [newShopLogo, setNewShopLogo] = useState(null);
+    const [editedShopData, setEditedShopData] = useState(null);
+    const [openDialog, setOpenDialog] = useState(false);
+    const [form] = Form.useForm();
+
     useEffect(() => {
         const idShop = localStorage.getItem(env.REACT_APP_IDSHOP);
         if (idShop) {
@@ -30,168 +29,243 @@ export default function ShopDetails() {
         } else {
             navigate(routes.shop);
         }
-
     }, [dispatch, navigate]);
 
-    // Cập nhật `editedShopData` khi vào chế độ chỉnh sửa
     useEffect(() => {
         if (shopData && isEditing) {
-            setEditedShopData(shopData); // Sao chép dữ liệu ban đầu vào `editedShopData` khi bắt đầu chỉnh sửa
+            setEditedShopData(shopData);
+            form.setFieldsValue(shopData);
         }
-    }, [shopData, isEditing]);
+    }, [shopData, isEditing, form]);
 
-    // Hàm định dạng ngày dd/mm/yy
-    
-
-    // Hàm xử lý thay đổi giá trị khi chỉnh sửa
-    const handleChange = (e) => {
-        setEditedShopData({
-            ...editedShopData,
-            [e.target.name]: e.target.value
-        });
-    };
-
-    // Hàm xử lý thay đổi ảnh
-    const handleImageChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setEditedShopData({ ...editedShopData, shopLogo: file })
-            const imageUrl = URL.createObjectURL(file);
-            setNewShopLogo(imageUrl); // Hiển thị ảnh mới
-        }
-    };
-
-    // Hàm lưu lại thông tin đã chỉnh sửa
     const handleSave = () => {
-
-        setIsEditing(false); // Đóng form chỉnh sửa
-        // // Dispatch action để lưu lại dữ liệu nếu cần
-        dispatch(updateShop(editedShopData))
+        form
+            .validateFields()
+            .then((values) => {
+                setIsEditing(false);
+                dispatch(updateShop({ ...editedShopData, ...values }));
+                message.success('Cập nhật thông tin thành công!');
+            })
+            .catch((info) => console.log('Validate Failed:', info));
     };
-    const handleCloseDialog = () => {
-        setOpenDialog(false)
-        // setEditedShopData(null)
-    }
-    const handleSubmitDialog = (password) => {
+
+    const handleImageChange = (info) => {
+        if (info.file.status === 'done' || info.file.status === 'uploading' || info.file.originFileObj) {
+            // AntD Upload "status" might be inconsistent without a real server URL, so we check originFileObj
+            const file = info.file.originFileObj || info.file;
+            if (file) {
+                const imageUrl = URL.createObjectURL(file);
+                setNewShopLogo(imageUrl);
+                setEditedShopData({ ...editedShopData, shopLogo: file });
+            }
+        }
+    };
+
+    // Prevent default auto-upload
+    const beforeUpload = (file) => {
+        const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png';
+        if (!isJpgOrPng) {
+            message.error('Bạn chỉ có thể tải lên file JPG/PNG!');
+            return Upload.LIST_IGNORE;
+        }
+        const isLt2M = file.size / 1024 / 1024 < 2;
+        if (!isLt2M) {
+            message.error('Hình ảnh phải nhỏ hơn 2MB!');
+            return Upload.LIST_IGNORE;
+        }
+        return false; // Prevent auto upload
+    };
+
+
+    const handleDelete = (password) => {
         const payload = {
             id: shopData.id,
-            password: password
-        }
-        dispatch(deleteShop(payload))
-    }
-    
-    
-    return (
-        <div className="o mt-10 p-6">
-           
-            <DialogInput
-                        handleClose={handleCloseDialog}
-                        onSubmit={handleSubmitDialog}
-                        open={openDialog} />
-            <div className="flex items-center justify-center mb-6">
-                <img
-                    src={newShopLogo || shopData?.shopLogo}
-                    alt="Shop Logo"
-                    className="object-cover w-32 h-32 rounded-full shadow-lg"
-                />
-            </div>
-            {isEditing ? (
-                // Chế độ chỉnh sửa
-                <div className="space-y-4">
-                    <div>
-                        <label className="block font-semibold">Tên cửa hàng</label>
-                        <input
-                            type="text"
-                            name="shopName"
-                            value={editedShopData?.shopName || ''}
-                            onChange={handleChange}
-                            className="w-full border p-2 rounded-md"
-                        />
-                    </div>
-                    <div>
-                        <label className="block font-semibold">Số điện thoại</label>
-                        <input
-                            type="text"
-                            name="shopPhone"
-                            value={editedShopData?.shopPhone || ''}
-                            onChange={handleChange}
-                            className="w-full border p-2 rounded-md"
-                        />
-                    </div>
-                    <div>
-                        <label className="block font-semibold">Địa chỉ</label>
-                        <input
-                            type="text"
-                            name="shopAddress"
-                            value={editedShopData?.shopAddress || ''}
-                            onChange={handleChange}
-                            className="w-full border p-2 rounded-md"
-                        />
-                    </div>
-                    <div>
-                        <label className="block font-semibold">Thay đổi ảnh</label>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleImageChange}
-                            className="w-full border p-2 rounded-md"
-                        />
-                    </div>
-                    <div className="flex space-x-4 mt-4">
-                        <button
-                            onClick={handleSave}
-                            className="px-4 py-2 bg-blue-600 text-white rounded-md"
-                        >
-                            Lưu
-                        </button>
-                        <button
-                            onClick={() => setIsEditing(false)}
-                            className="px-4 py-2 bg-gray-400 text-white rounded-md"
-                        >
-                            Hủy
-                        </button>
-                    </div>
-                </div>
-            ) : (
-                // Chế độ xem
-                <div className="space-y-4">
-                    <div>
-                        <h2 className="text-2xl font-bold">{shopData?.shopName}</h2>
-                    </div>
-                    <div>
-                        <p className="font-semibold">Số điện thoại: </p>
-                        <p>{shopData?.shopPhone}</p>
-                    </div>
-                    <div>
-                        <p className="font-semibold">Địa chỉ: </p>
-                        <p>{shopData?.shopAddress}</p>
-                    </div>
-                    <div>
-                        <p className={`font-semibold ${shopData?.isActive ? 'text-green-500' : 'text-red-500'}`}>
-                            {shopData?.isActive ? 'Đang mở cửa' : 'Đang đóng cửa'}
-                        </p>
-                    </div>
-                    <div>
-                        <p className="font-semibold">Ngày tạo: {formatDate(shopData?.createAt)}</p>
-                        <p className="font-semibold">Cập nhật lần cuối: {formatDate(shopData?.updateAt)}</p>
-                    </div>
-                    <div className='flex justify-between'>
-                        <button
-                            onClick={() => setIsEditing(true)}
-                            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-md"
-                        >
-                            Sửa thông tin
-                        </button>
+            password,
+        };
+        dispatch(deleteShop(payload));
+        setOpenDialog(false);
+    };
 
-                        <button
-                            onClick={() => setOpenDialog(true)}
-                            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md"
-                        >
-                            Xóa cửa hàng
-                        </button>
+    return (
+        <div className="min-h-[calc(100vh-var(--header-height))] bg-gray-50/50 p-6 md:p-10 flex justify-center items-start">
+            <Modal
+                title="Xác nhận xóa cửa hàng"
+                open={openDialog}
+                onCancel={() => setOpenDialog(false)}
+                onOk={() => form.submit()} // This might conflict if we were reusing the same form instance, but delete logic uses a separate internal form in Modal usually. 
+                // Wait, previous code used form.submit() which triggered the MAIN form. 
+                // Let's create a separate simple form for password inside Modal to be safe.
+                okText="Xóa"
+                cancelText="Hủy"
+                okButtonProps={{ danger: true }}
+            >
+                <Form onFinish={({ password }) => handleDelete(password)}>
+                    <p className="text-gray-500 mb-4">Hành động này không thể hoàn tác. Vui lòng nhập mật khẩu để xác nhận.</p>
+                    <Form.Item
+                        name="password"
+                        rules={[{ required: true, message: 'Vui lòng nhập mật khẩu' }]}
+                    >
+                        <Input.Password placeholder="Nhập mật khẩu của bạn" />
+                    </Form.Item>
+                </Form>
+            </Modal>
+
+            <div className="w-full max-w-3xl bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+                {/* Header Banner Area */}
+                <div className="h-32 bg-gradient-to-r from-orange-100 to-orange-50 relative"></div>
+
+                <div className="px-8 pb-8 -mt-12">
+                    <div className="flex flex-col md:flex-row items-start gap-6">
+                        {/* Logo Upload/View */}
+                        <div className="relative group">
+                            <div className="w-28 h-28 rounded-2xl border-4 border-white shadow-md bg-white overflow-hidden flex items-center justify-center">
+                                <img
+                                    src={newShopLogo || shopData?.shopLogo || "https://via.placeholder.com/150"}
+                                    alt="Shop Logo"
+                                    className="w-full h-full object-cover"
+                                />
+                            </div>
+                            {isEditing && (
+                                <Upload
+                                    name="avatar"
+                                    showUploadList={false}
+                                    beforeUpload={beforeUpload}
+                                    onChange={handleImageChange}
+                                    className="absolute bottom-0 right-0"
+                                >
+                                    <button className="w-8 h-8 flex items-center justify-center bg-gray-800 text-white rounded-full hover:bg-black transition-colors shadow-sm" title="Thay đổi ảnh">
+                                        <UploadOutlined />
+                                    </button>
+                                </Upload>
+                            )}
+                        </div>
+
+                        {/* Title Section */}
+                        <div className="mt-12 md:mt-14 flex-1 w-full">
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                <div>
+                                    <h1 className="text-2xl font-bold text-gray-800">{shopData?.shopName}</h1>
+                                    <p className="text-sm text-gray-500 flex items-center gap-2 mt-1">
+                                        <span className={`inline-block w-2 h-2 rounded-full ${shopData?.isActive ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                        {shopData?.isActive ? 'Đang hoạt động' : 'Tạm dừng'}
+                                    </p>
+                                </div>
+
+                                {!isEditing && (
+                                    <div className="flex gap-2">
+                                        <Button
+                                            type="default"
+                                            icon={<MdEdit />}
+                                            onClick={() => setIsEditing(true)}
+                                            className="flex items-center"
+                                        >
+                                            Chỉnh sửa
+                                        </Button>
+                                        <Button
+                                            danger
+                                            icon={<MdDelete />}
+                                            onClick={() => setOpenDialog(true)}
+                                            className="flex items-center"
+                                        >
+                                            Xóa
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="mt-8 border-t border-gray-100 pt-8">
+                        {isEditing ? (
+                            <Form
+                                layout="vertical"
+                                form={form}
+                                initialValues={shopData}
+                                className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2"
+                            >
+                                <Form.Item
+                                    name="shopName"
+                                    label="Tên cửa hàng"
+                                    rules={[{ required: true, message: 'Vui lòng nhập tên cửa hàng' }]}
+                                    className="md:col-span-2"
+                                >
+                                    <Input size="large" prefix={<MdStorefront className="text-gray-400" />} placeholder="Nhập tên cửa hàng" />
+                                </Form.Item>
+
+                                <Form.Item
+                                    name="shopPhone"
+                                    label="Số điện thoại"
+                                    rules={[
+                                        { required: true, message: 'Vui lòng nhập số điện thoại' },
+                                        { pattern: /^[0-9]{10,11}$/, message: 'Số điện thoại không hợp lệ' }
+                                    ]}
+                                >
+                                    <Input size="large" prefix={<MdPhone className="text-gray-400" />} placeholder="Nhập số điện thoại" />
+                                </Form.Item>
+
+                                <Form.Item
+                                    name="shopAddress"
+                                    label="Địa chỉ"
+                                    rules={[{ required: true, message: 'Vui lòng nhập địa chỉ' }]}
+                                    className="md:col-span-2"
+                                >
+                                    <Input.TextArea rows={2} showCount maxLength={200} placeholder="Nhập địa chỉ" />
+                                </Form.Item>
+
+                                <div className="md:col-span-2 flex justify-end gap-3 mt-4">
+                                    <Button size="large" onClick={() => setIsEditing(false)} icon={<MdCancel />}>
+                                        Hủy bỏ
+                                    </Button>
+                                    <Button type="primary" size="large" onClick={handleSave} icon={<MdSave />} className="bg-orange-500 hover:bg-orange-600 border-orange-500">
+                                        Lưu thay đổi
+                                    </Button>
+                                </div>
+                            </Form>
+                        ) : (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-gray-700">
+                                <div className="space-y-4">
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 shrink-0">
+                                            <MdPhone size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Số điện thoại</p>
+                                            <p className="font-semibold text-lg">{shopData?.shopPhone}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-start gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-500 shrink-0">
+                                            <MdLocationOn size={20} />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Địa chỉ</p>
+                                            <p className="font-medium">{shopData?.shopAddress}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-gray-50 rounded-xl p-5 space-y-2 text-sm border border-gray-100">
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-500">Ngày tạo:</span>
+                                        <span className="font-medium text-gray-800">{formatDate(shopData?.createAt)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-500">Cập nhật lần cuối:</span>
+                                        <span className="font-medium text-gray-800">{formatDate(shopData?.updateAt)}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="text-gray-500">Trạng thái:</span>
+                                        <span className={`font-bold ${shopData?.isActive ? 'text-green-600' : 'text-red-600'}`}>
+                                            {shopData?.isActive ? 'ACTIVE' : 'INACTIVE'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 }

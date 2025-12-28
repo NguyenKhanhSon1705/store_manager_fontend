@@ -8,7 +8,7 @@ const LoadingShopCardSkeleton = () => {
           <div
             key={index}
             className="p-4 rounded-lg w-48 relative"
-            style={{ height: '250px' }} // adjust height as needed
+            style={{ height: '250px' }} 
           >
             {/* Image Skeleton */}
             <Skeleton height={100} />

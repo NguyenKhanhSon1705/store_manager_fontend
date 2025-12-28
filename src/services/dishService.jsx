@@ -2,6 +2,7 @@ import getShopId from "../constants/getShopId";
 import httpRequest from "../utils/axios";
 import uploadService from "../services/uploadService";
 import customResponse from "./customResponse";
+import { toast } from "react-toastify";
 
 const apiGetAllDish = async (payload) => {
   try {
@@ -13,12 +14,14 @@ const apiGetAllDish = async (payload) => {
         search: payload.search || "",
       },
     });
-    return res;
+    if (res.data?.isSuccess) {
+      return res.data;
+    }
+    return res.data;
   } catch (e) {
     return customResponse(e);
   }
 };
-
 
 const apiGetDishByMenugroup = async (payload) => {
   try {
@@ -28,23 +31,21 @@ const apiGetDishByMenugroup = async (payload) => {
         pageSize: payload.pageSize ?? 10,
         pageIndex: payload.pageIndex ?? 1,
         search: payload.search ?? "",
-        menuGroupId: payload.menuGroupId ?? "" ,
+        menuGroupId: payload.menuGroupId ?? "",
       },
     });
-    
-    return res;
+    if (res.data?.isSuccess) {
+      return res.data;
+    }
+    return res.data;
   } catch (e) {
     return customResponse(e);
   }
 };
 
 const apiCreateDish = async (payload) => {
-  console.log(payload);
-  
   const result =
     payload.Image_C && (await uploadService.uploadAnImage(payload.Image_C));
-    console.log(result);
-    
   try {
     if (result?.success) {
       payload.Image = result.data.secure_url;
@@ -64,7 +65,7 @@ const apiDeleteDish = async (payload) => {
   try {
     const res = await httpRequest.delete("/api/dish/delete-dish", {
       params: {
-        id: payload.id,
+        id: payload,
       },
     });
     if (res.data.isSuccess) {
@@ -78,14 +79,50 @@ const apiDeleteDish = async (payload) => {
   }
 };
 
-const apiUpdateDish = async (payload) => {
+const apiAddPriceDish = async (payload) => {
   try {
+    const res = await httpRequest.post("/api/dish/add-price-dish", payload);
+    if (res.data.isSuccess) {
+      toast.success(res.data.message);
+      return res.data;
+    }
+    return res.response;
+  } catch (e) {
+    return customResponse(e);
+  }
+};
+const apiDeletePriceDish = async (payload) => {
+  try {
+    const res = await httpRequest.delete("/api/dish/delete-price-dish", {
+      params: {
+        id: payload,
+      },
+    });
+    if (res.data.isSuccess) {
+      toast.success(res.data.message);
+      return res.data;
+    }
+    return res.response;
+  } catch (e) {
+    return customResponse(e);
+  }
+};
+
+const apiUpdateDish = async (payload) => {
+  const result =
+    payload.Image_C && (await uploadService.uploadAnImage(payload.Image_C));
+  try {
+    if (result?.success) {
+      payload.Image = result.data.secure_url;
+    }
+    payload.shop_Id = getShopId();
     const res = await httpRequest.put("/api/dish/update-dish", payload);
     if (res.data.isSuccess) {
       return res.data;
     }
     return res.response;
   } catch (e) {
+    await uploadService.deleteAnImage(result.data.secure_url);
     return customResponse(e);
   }
 };
@@ -94,6 +131,8 @@ const dishService = {
   apiGetAllDish,
   apiDeleteDish,
   apiUpdateDish,
-  apiGetDishByMenugroup
+  apiGetDishByMenugroup,
+  apiAddPriceDish,
+  apiDeletePriceDish,
 };
 export default dishService;

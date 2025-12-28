@@ -1,4 +1,5 @@
 import { motion } from "framer-motion";
+import ROUTE_PATH from "~/routes/routesPath";
 
 const ErrorDetails = () => {
   return (
@@ -43,7 +44,7 @@ const ErrorDetails = () => {
           transition={{ delay: 0.7, duration: 0.5 }}
         >
           <a
-            href="/"
+            href={ROUTE_PATH.tables_by_area}
             className="inline-block px-6 py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white font-semibold rounded-lg shadow-lg hover:scale-105 transform transition-all"
           >
             Go Back Home

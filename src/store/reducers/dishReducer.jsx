@@ -12,12 +12,14 @@ export default function dishReducer(state = initState, action){
     switch (action.type){
         case actionTypes.GET_ALL_DISH:{
             return {
+                ...state,
                 data : action.payload.data,
                 loading: false
             }
         }
         case actionTypes.GET_DISH_BY_MENUGROUP:{
             return {
+                ...state,
                 dish_menugroup : action.payload.data,
                 loading: false
             }
@@ -33,6 +35,16 @@ export default function dishReducer(state = initState, action){
                     totalCount: totalCount
                 },
                 update: false
+            }
+        }
+        case actionTypes.UPDATE_DISH: {
+            return {
+                ...state,
+                data: {
+                    ...state.data,
+                    items: state.data.items.map(item => item.id === action.payload.data.id? action.payload.data : item)
+                },
+                update: false,
             }
         }
         case actionTypes.DELETE_DISH:{

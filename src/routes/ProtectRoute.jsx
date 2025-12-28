@@ -13,7 +13,6 @@ function ProtectRoute() {
   }, [navigate]);
   const accessToken = getAccessToken();
   if (!accessToken) {
-      console.log("Vui lòng đăng nhập");
       toast.warning("Vui lòng đăng nhập");
       return <Navigate to={ROUTE_PATH.LOGIN} />;
     }

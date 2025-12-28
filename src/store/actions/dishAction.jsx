@@ -11,17 +11,16 @@ import actionTypes from "./actionTypes";
   });
   try {
     let res = await dishService.apiGetAllDish(payload);
-    if (res?.data?.isSuccess) {
+    if (res?.isSuccess) {
       dispatch({
         type: actionTypes.GET_ALL_DISH,
         payload: {
           loading: false,
-          data: res.data.data,
+          data: res.data,
         },
       });
     } else {
-      res = res.response;
-      toast.error(res?.data?.message || Object.values(res?.data?.errors)[0]);
+      toast.error(res?.message || 'Failed to load dishes');
     }
   } catch (e) {
     toast.error(e.message);
@@ -44,17 +43,16 @@ const getDishByMenugroup = (payload) => async (dispatch) => {
   });
   try {
     let res = await dishService.apiGetDishByMenugroup(payload);
-    if (res?.data?.isSuccess) {
+    if (res?.isSuccess) {
       dispatch({
         type: actionTypes.GET_DISH_BY_MENUGROUP,
         payload: {
           loading: false,
-          data: res.data.data,
+          data: res.data,
         },
       });
     } else {
-      res = res.response;
-      toast.error(res?.data?.message || Object.values(res?.data?.errors)[0]);
+      toast.error(res?.message || 'Failed to load dishes');
     }
   } catch (e) {
     toast.error(e.message);
@@ -86,7 +84,6 @@ const getDishByMenugroup = (payload) => async (dispatch) => {
       },
     });
   } else {
-    toast.error(res);
     dispatch({
       type: actionTypes.ERROR_DISH,
       payload: {
@@ -115,7 +112,6 @@ const getDishByMenugroup = (payload) => async (dispatch) => {
       },
     });
   } else {
-    toast.error(res);
     dispatch({
       type: actionTypes.ERROR_DISH,
       payload: {
@@ -123,12 +119,54 @@ const getDishByMenugroup = (payload) => async (dispatch) => {
       },
     });
   }
- }
+ 
+}
+
+const updateDish = (payload) => async (dispatch) => {
+  dispatch({
+    type: actionTypes.LOADING_DISH,
+    payload: {
+      update: true,
+    },
+  });
+
+  try {
+    let res = await dishService.apiUpdateDish(payload);
+    if (res?.isSuccess) {
+      toast.success(res?.message);
+      dispatch({
+        type: actionTypes.UPDATE_DISH,
+        payload: {
+          update: false,
+          data: res.data,
+          id: payload.id,
+        },
+      });
+    } else {
+      dispatch({
+        type: actionTypes.ERROR_DISH,
+        payload: {
+          update: false,
+          error: res?.message || 'Update failed',
+        },
+      });
+    }
+  } catch (error) {
+    dispatch({
+      type: actionTypes.ERROR_DISH,
+      payload: {
+        update: false,
+        error: error.message || 'An error occurred',
+      },
+    });
+  }
+};
 
 const dishAction = {
   getListDish,
   createDish,
   deleteDish,
-  getDishByMenugroup
+  getDishByMenugroup,
+  updateDish
 }
 export default dishAction

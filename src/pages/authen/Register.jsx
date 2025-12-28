@@ -43,7 +43,7 @@ const Register = () => {
     if (isConfirm) {
       navigator(ROUTE_PATH.LOGIN)
     }
-  }, [isConfirm,navigator]);
+  }, [isConfirm, navigator]);
 
   const handleSendCode = () => {
     dispatch(

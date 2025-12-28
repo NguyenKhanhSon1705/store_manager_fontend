@@ -7,22 +7,28 @@ import {
   Form,
   Image,
   Input,
-  InputNumber,
   Modal,
   Popconfirm,
   Table,
+  Empty,
+  Tag,
+  Divider,
+  message
 } from "antd";
-import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
-import { MdOutlineDeleteSweep } from "react-icons/md";
-import { FaRegEdit } from "react-icons/fa";
-import { FaCheck } from "react-icons/fa";
-import { IoCloseCircleOutline } from "react-icons/io5";
-import { FaPlus } from "react-icons/fa";
-import { MdOutlinePayments } from "react-icons/md";
+import { useEffect, useState, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  MdOutlineDeleteSweep,
+  MdOutlinePayments,
+  MdAdd,
+  MdRemove,
+  MdEdit,
+  MdEventSeat,
+  MdAccessTime
+} from "react-icons/md";
+import { FaPlus, FaExchangeAlt } from "react-icons/fa";
+import { IoCloseCircleOutline, IoSaveOutline } from "react-icons/io5";
 import { RxUpdate } from "react-icons/rx";
-import { FaArrowsTurnRight } from "react-icons/fa6";
-import { FaOpenid } from "react-icons/fa6";
 
 import { toast } from "react-toastify";
 import formatTime from "../../utils/functions/formatTime";
@@ -31,569 +37,484 @@ import { validatePriceVND } from "../../utils/validatePriceVND";
 import { useDispatch, useSelector } from "react-redux";
 import orderAction from "../../store/actions/orderAction";
 import images from "../../assets/images";
-import TextArea from "antd/es/input/TextArea";
 import LoadingSyncLoader from "../../components/loading/LoadingSyncLoader";
 import TablesByArea from "./TablesByArea";
-const EditableCell = ({
-  editing,
-  dataIndex,
-  // title,
-  inputType,
-  // record,
-  // index,
-  children,
-  ...restProps
-}) => {
-  const inputNode =
-    inputType === "number" ? (
-      <InputNumber min={1} max={50} />
-    ) : (
-      <TextArea rows={6} placeholder="Ghi chú" />
-    );
+import ROUTE_PATH from "../../routes/routesPath";
 
-  return (
-    <td {...restProps}>
-      {editing ? (
-        <Form.Item
-          name={dataIndex}
-          style={{
-            margin: 0,
-          }}
-          rules={[
-            {
-              required: inputType !== "text",
-              message: ``,
-            },
-          ]}
-        >
-          {inputNode}
-        </Form.Item>
-      ) : (
-        children
-      )}
-    </td>
-  );
-};
-
-const mergeData = (data1, data2) => {
-  const result = [...data1];
-  data2.forEach((item2) => {
-    const existingItem = result.find((item1) => item1.key === item2.key);
-    if (existingItem) {
-      existingItem.quantity = existingItem.quantity
-        ? parseInt(existingItem.quantity) + 1
-        : 1;
-    } else {
-      result.push({ ...item2, quantity: "1" });
-    }
-  });
-  return result;
-};
-
-const calculateTotal = (data) => {
-  let totalQuantity = 0;
-  let totalPrice = 0;
-  Array.isArray(data) &&
-    data.forEach((item) => {
-      const quantity = parseInt(item.quantity) || 0;
-      const price =
-        parseFloat(item.selling_Price.replace(/\./g, "").replace("đ", "")) || 0;
-      totalQuantity += quantity;
-      totalPrice += quantity * price;
-    });
-
-  return { totalQuantity, totalPrice };
-};
-
+const { TextArea } = Input;
 const { confirm } = Modal;
+
+// Helper to parse price string to number
+const parsePrice = (priceStr) => {
+  if (!priceStr) return 0;
+  if (typeof priceStr === 'number') return priceStr;
+  return parseFloat(priceStr.toString().replace(/\./g, "").replace("đ", "")) || 0;
+};
+
 function ChooseDishForTable() {
   const [form] = Form.useForm();
+  const navigate = useNavigate();
   const dispatch = useDispatch();
   const location = useLocation();
-  const { table } = location.state || {};
-  const [isModalVisible, setIsModalVisible] = useState(false);
+  const { table } = location.state || {}; // Initial table info passed from navigation
+
+  // Local State
+  const [data, setData] = useState([]); // Cart Data
+  const [isModalVisible, setIsModalVisible] = useState(false); // Abort Table Modal
   const [reason, setReason] = useState("");
-  const [openModal, setOpenModal] = useState(false);
-  const [openModalChoose, setOpenModalChoose] = useState(false);
-  const [editingKey, setEditingKey] = useState("");
-  const [data, setData] = useState([]);
-  const [totalPayment, setTotalPayment] = useState({});
+  const [openAddDishModal, setOpenAddDishModal] = useState(false);
+  const [openSwitchTableModal, setOpenSwitchTableModal] = useState(false);
 
   const { currDish, loading, update } = useSelector((state) => state.order);
 
+  // Fetch data on mount or table change
   useEffect(() => {
-    dispatch(orderAction.getInfoDishCurrentTable(table.id));
-  }, [dispatch, table.id]);
+    if (table?.id) {
+      dispatch(orderAction.getInfoDishCurrentTable(table.id));
+    }
+  }, [dispatch, table?.id]);
 
+  // Sync Redux data to Local State
   useEffect(() => {
-    const transformedArray2 =
-      Array.isArray(currDish?.dish) &&
-      currDish.dish.map((item) => ({
-        key: item.id,
+    if (currDish?.dish && Array.isArray(currDish.dish)) {
+      const formattedData = currDish.dish.map((item) => ({
+        key: item.id || item.key, // Ensure key exists
+        id: item.id || item.key,
         dish_Name: item.dish_Name,
-        image: {
-          props: {
-            width: 60,
-            height: 60,
-            src: item.image,
-          },
-        },
-        selling_Price: validatePriceVND("" + item.selling_Price),
-        quantity: item.quantity,
-        notes: item.notes,
+        image: item.image,
+        selling_Price: parsePrice(item.selling_Price),
+        quantity: item.quantity ? parseInt(item.quantity) : 1,
+        notes: item.notes || "",
       }));
-
-    setTotalPayment(calculateTotal(transformedArray2));
-    setData(transformedArray2);
+      setData(formattedData);
+    } else {
+      setData([]);
+    }
   }, [currDish]);
 
-  const isEditing = (record) => record.key === editingKey;
-  const handleOk = (items) => {
-    const newData = mergeData(data, items);
-    setTotalPayment(calculateTotal(newData));
-    setData(newData);
-    setOpenModal(false);
-  };
-
-  const edit = (record) => {
-    form.setFieldsValue({
-      price: "",
-      ...record,
+  // Calculations
+  const { totalQuantity, totalPrice } = useMemo(() => {
+    let qty = 0;
+    let price = 0;
+    data.forEach(item => {
+      qty += item.quantity;
+      price += item.quantity * item.selling_Price;
     });
-    setEditingKey(record.key);
-  };
-  const cancel = () => {
-    setEditingKey("");
-  };
-  const save = async (key) => {
-    try {
-      const row = await form.validateFields();
-      const newData = [...data];
-      const index = newData.findIndex((item) => key === item.key);
-      if (index > -1) {
-        const item = newData[index];
-        newData.splice(index, 1, {
-          ...item,
-          ...row,
-        });
-        setData(newData);
-        setEditingKey("");
-      } else {
-        newData.push(row);
-        setData(newData);
-        setEditingKey("");
-      }
-      setTotalPayment(calculateTotal(newData));
-      toast.success("Cập nhật thành công");
-    } catch {
-      toast.error("Yêu cầu nhập số lượng");
-    }
-  };
-  const deleteRecord = (key) => {
-    const newData = data.filter((item) => item.key !== key);
-    setTotalPayment(calculateTotal(newData));
+    return { totalQuantity: qty, totalPrice: price };
+  }, [data]);
 
+
+  // --- Handlers ---
+
+  const handleMergeDishes = (newItems) => {
+    const currentData = [...data];
+    newItems.forEach(newItem => {
+      const price = parsePrice(newItem.selling_Price);
+      const existingIndex = currentData.findIndex(item => item.id === newItem.key || item.key === newItem.key);
+
+      if (existingIndex > -1) {
+        // Increase quantity if exists
+        currentData[existingIndex].quantity += 1;
+      } else {
+        // Add new
+        currentData.push({
+          key: newItem.key,
+          id: newItem.key,
+          dish_Name: newItem.dish_Name,
+          image: newItem.image?.props?.src || newItem.image, // Handle potentially different image structures
+          selling_Price: price,
+          quantity: 1,
+          notes: "",
+        });
+      }
+    });
+    setData(currentData);
+    setOpenAddDishModal(false);
+    message.success("Đã thêm món vào danh sách");
+  };
+
+  const handleQuantityChange = (key, delta) => {
+    const newData = data.map(item => {
+      if (item.key === key) {
+        const newQty = Math.max(1, item.quantity + delta);
+        return { ...item, quantity: newQty };
+      }
+      return item;
+    });
     setData(newData);
   };
-  const columns = [
-    {
-      title: "Tên món",
-      dataIndex: "dish_Name",
-      width: "25%",
-      editable: false,
-    },
-    {
-      title: "Ảnh",
-      dataIndex: "image",
-      width: "10%",
-      editable: false,
 
-      render: (image) => (
-        <div className="w-full h-full flex">
-          <Image
-            className="rounded-md"
-            src={image.props.src}
-            alt="Dish"
-            width={80}
-            height={60}
-            fallback={images.img_default}
-          />
-        </div>
-      ),
-    },
-    {
-      title: "Giá",
-      dataIndex: "selling_Price",
-      width: "10%",
-      editable: false,
-    },
-    {
-      title: "Số lượng",
-      dataIndex: "quantity",
-      width: "10%",
-      editable: true,
-    },
-    {
-      title: "Ghi chú",
-      dataIndex: "notes",
-      width: "25%",
-      editable: true,
-    },
-    {
-      title: "Chức năng",
-      dataIndex: "operation",
-      width: "5%",
-      render: (_, record) => {
-        const editable = isEditing(record);
-        return (
-          <div className="flex items-center justify-center space-x-4">
-            {editable ? (
-              <>
-                <Popconfirm
-                  okText={"Đồng ý"}
-                  cancelText={"Hủy"}
-                  title="Chắc chắn Lưu?"
-                  onConfirm={() => save(record.key)}
-                >
-                  <a className="p-1 border rounded-md text-green-500 hover:underline">
-                    <FaCheck />
-                  </a>
-                </Popconfirm>
-                <a
-                  onClick={cancel}
-                  className="text-red-500 hover:text-red-500 p-1 border rounded-md"
-                >
-                  <IoCloseCircleOutline />
-                </a>
-              </>
-            ) : (
-              <a
-                disabled={editingKey !== ""}
-                onClick={() => edit(record)}
-                className="text-[var(--primary)] text-xl hover:underline p-2 border rounded-sm"
-              >
-                <FaRegEdit />
-              </a>
-            )}
+  const handleDeleteItem = (key) => {
+    const newData = data.filter(item => item.key !== key);
+    setData(newData);
+  };
 
-            <Popconfirm
-              title="Bạn có chắc chắn muốn xóa?"
-              onConfirm={() => deleteRecord(record.key)}
-            >
-              <a className="text-red-500 text-xl p-2 hover:text-red-700 border rounded-sm">
-                <MdOutlineDeleteSweep />
-              </a>
-            </Popconfirm>
-          </div>
-        );
+  const handleNoteChange = (key, text) => {
+    const newData = data.map(item => {
+      if (item.key === key) return { ...item, notes: text };
+      return item;
+    });
+    setData(newData);
+  };
+
+  // --- Server Actions ---
+
+  const handleUpdateOrder = () => {
+    confirm({
+      title: "Cập nhật đơn hàng",
+      content: "Bạn có chắc chắn muốn lưu các thay đổi này?",
+      okText: "Cập nhật",
+      okType: "primary",
+      cancelText: "Hủy",
+      onOk() {
+        const payload = {
+          tableId: currDish?.id || table.id, // Use currDish id if available (loaded), else fallback
+          listDishId: data.map((item) => ({
+            key: item.key,
+            quantity: item.quantity,
+            notes: item.notes,
+            selling_Price: item.selling_Price
+          })),
+        };
+
+        const isTableActive = currDish?.isActive;
+        const isEmptyOrder = payload.listDishId.length <= 0;
+
+        if (isEmptyOrder && !currDish?.hasHourlyRate) {
+          message.warning("Không thể lưu đơn hàng trống (trừ khi tính giờ).");
+          return;
+        }
+
+        if (isTableActive) {
+          dispatch(orderAction.updateTable(payload));
+        } else {
+          // If table is inactive, this actions conceptually "Opens" the table
+          dispatch(orderAction.openTable(payload));
+        }
       },
-    },
-  ];
+    });
+  };
 
-  const mergedColumns = columns.map((col) => {
-    if (!col.editable) {
-      return col;
-    }
-    return {
-      ...col,
-      onCell: (record) => ({
-        record,
-        inputType: col.dataIndex === "quantity" ? "number" : "text",
-        dataIndex: col.dataIndex,
-        title: col.title,
-        editing: isEditing(record),
-      }),
-    };
-  });
   const handlePayment = () => {
     confirm({
-      title: "Bạn chắc chắn thanh toán không?",
-      okText: "Thanh toán",
+      title: "Xác nhận thanh toán",
+      content: `Tổng tiền cần thanh toán: ${validatePriceVND(String(totalPrice))}đ. Bạn có muốn tiếp tục?`,
+      okText: "Đến trang thanh toán",
       okType: "primary",
       cancelText: "Hủy",
-      centered: true,
       onOk() {
-        // dispatch(changeTable(item))
+        navigate(ROUTE_PATH.CHECK_OUT, { state: { table_id: currDish?.id } });
       },
     });
-  };
-  const handleUpdate = () => {
-    confirm({
-      title: "Bạn chắc chắn cập nhật món ăn không?",
-      okText: "cập nhật",
-      okType: "primary",
-      cancelText: "Hủy",
-      centered: true,
-      onOk() {
-        const payload = {
-          tableId: currDish?.id,
-          listDishId: data.map((item) => {
-            return {
-              key: item.key,
-              quantity: +item.quantity,
-              notes: item.notes || "",
-              selling_Price:
-                parseFloat(
-                  item.selling_Price.replace(/\./g, "").replace("đ", "")
-                ) || 0,
-            };
-          }),
-        };
-        if (payload.listDishId.length <= 0 && !currDish.hasHourlyRate) {
-          toast.warning("Không được mở bàn trống");
-          return;
-        }
-        dispatch(orderAction.updateTable(payload));
-      },
-    });
-  };
-  const handleOpenTable = () => {
-    confirm({
-      title: "Bạn muốn mở bàn này chứ ?",
-      okText: "Mở ngay",
-      okType: "primary",
-      cancelText: "Hủy",
-      centered: true,
-      onOk() {
-        const payload = {
-          tableId: table.id,
-          listDishId: data.map((item) => {
-            return {
-              key: item.key,
-              quantity: +item.quantity,
-              notes: item.notes || "",
-              selling_Price:
-                parseFloat(
-                  item.selling_Price.replace(/\./g, "").replace("đ", "")
-                ) || 0,
-            };
-          }),
-        };
-        if (payload.listDishId.length <= 0 && !currDish.hasHourlyRate) {
-          toast.warning("Không được mở bàn trống");
-          return;
-        }
-        dispatch(orderAction.openTable(payload));
-      },
-    });
-  };
-  const handleChangeTable = () => {
-    setOpenModalChoose(true);
-    // confirm({
-    //   title: "Bạn chắc chắn chuyển bàn này không?",
-    //   okText: "Chuyển",
-    //   okType: "primary",
-    //   cancelText: "Hủy",
-    //   centered: true,
-    //   onOk() {
-    //     // dispatch(changeTable(item))
-    //   },
-    // });
   };
 
-  const handleOks = () => {
-    if (!reason) {
-      Modal.warning({
-        title: "Lý do không được để trống",
-      });
+  const handleSwitchTable = (newTable) => {
+    console.log(newTable);
+    if (newTable.isActive) {
+      message.error("Bàn này đang có khách, không thể chuyển đến!");
       return;
     }
     confirm({
-      title: "Bạn chắc chắn hủy bàn này không ?",
-      okText: "Đồng ý",
-      okType: "danger",
-      cancelText: "Không",
-      centered: true,
+      title: "Chuyển bàn",
+      content: `Xác nhận chuyển từ ${currDish?.nameTable} sang ${newTable.nameTable}?`,
+      async onOk() {
+        const payload = {
+          table_id_old: currDish.id,
+          table_id_new: newTable.id
+        };
+        const res = await dispatch(orderAction.changeTable(payload));
+        if (res?.isSuccess) {
+          setOpenSwitchTableModal(false);
+          // 1. Force update the Redux state with the new table's data immediately
+          await dispatch(orderAction.getInfoDishCurrentTable(newTable.id));
+
+          // 2. Navigate to update the URL and 'location.state' for the Header/Context
+          navigate(location.pathname, { state: { table: newTable }, replace: true });
+        }
+      }
+    })
+  }
+
+  const handleAbortTable = () => {
+    if (!reason.trim()) {
+      message.error("Vui lòng nhập lý do hủy bàn!");
+      return;
+    }
+    confirm({
+      title: "Hủy bàn",
+      content: "Hành động này sẽ hủy bàn và xóa toàn bộ đơn hàng hiện tại. Bạn có chắc chắn?",
+      okType: 'danger',
       onOk() {
-        setIsModalVisible(false);
-        setReason("");
         const payload = {
           table_Id: currDish.id,
           reason_abort: reason,
-          total_money: totalPayment.totalPrice,
-          total_quantity: totalPayment.totalQuantity,
+          total_money: totalPrice,
+          total_quantity: totalQuantity,
         };
         dispatch(orderAction.abortedTable(payload));
-      },
-    });
-  };
-  const handlecancel = () => {
-    setIsModalVisible(true);
-  };
-  const handleCancel = () => {
-    setIsModalVisible(false);
-    setReason("");
-  };
-  return (
-    <div>
-      {update && <LoadingSyncLoader />}
-      <Modal
-      open={openModalChoose}
-       width="75%"
-       onCancel={() => setOpenModalChoose(false)}
-       footer={null}
+        setIsModalVisible(false);
+        setReason("");
+      }
+    })
+  }
 
-      >
-        <TablesByArea />
-      </Modal>
-      
-      <Modal
-        title="Lý do hủy bàn"
-        open={isModalVisible}
-        onOk={handleOks}
-        onCancel={handleCancel}
-        okText="Xác nhận"
-        cancelText="Hủy"
-        centered
-      >
-        <Input.TextArea
-          placeholder="Nhập lý do hủy bàn"
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          rows={4}
-        />
-      </Modal>
-      <Modal
-        width="75%"
-        open={openModal}
-        onCancel={() => setOpenModal(false)}
-        footer={null}
-      >
-        <Dish onSubmit={(data) => handleOk(data)} />
-      </Modal>
 
-      <Breadcrumb
-        items={[
-          { name: "Khu vực bàn", href: routes.tables_by_area },
-          { name: "Tạo bàn", href: "" },
-        ]}
-      />
+  // --- Render ---
 
-      <div className="grid grid-cols-4 grid-rows-1 gap-5">
-        <div className="col-span-3">
-          <div className="flex">
-            <Button
-              className="bg-[var(--primary)] text-[var(--textlight)] font-bold"
-              onClick={() => setOpenModal(true)}
-            >
-              <FaPlus />
-              Thêm món ăn
-            </Button>
+  // Columns for AntD Table
+  const columns = [
+    {
+      title: 'Món ăn',
+      dataIndex: 'dish_Name',
+      key: 'dish_Name',
+      render: (text, record) => (
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-lg overflow-hidden border border-gray-100 shrink-0">
+            <Image
+              src={record.image || images.img_default}
+              alt={text}
+              width="100%"
+              height="100%"
+              className="object-cover"
+              preview={false}
+              fallback={images.img_default}
+            />
           </div>
-          <div className="mt-5 border-t-2">
-            <Form form={form} component={false}>
-              <Table
-                loading={loading}
-                bordered={false}
-                showHeader={true}
-                components={{
-                  body: {
-                    cell: EditableCell,
-                  },
-                }}
-                dataSource={data}
-                columns={mergedColumns}
-                rowClassName="editable-row"
-                pagination={false}
-              />
-            </Form>
+          <div>
+            <p className="font-semibold text-gray-800 line-clamp-2">{text}</p>
+            <p className="text-orange-600 font-medium text-xs">{validatePriceVND(String(record.selling_Price))}</p>
           </div>
         </div>
-        <div className="col-start-4">
-          <div className="text-center font-bold border-b-2 text-[20px] mt-[22px]">
-            Thông tin
-          </div>
-          <div className="text-[15px] pl-2 border-l-2 ">
-            <div className="grid grid-cols-1 grid-rows-3 gap-1">
-              <div className="flex">
-                <p className="font-bold">Bàn:&nbsp;</p>
-                <p> {currDish?.nameTable}</p>&nbsp;-&nbsp;
-                <p>{currDish?.areaName}</p>{" "}
-              </div>
-              <div className="flex">
-                <p className="font-bold">Ngày vào:&nbsp;</p>{" "}
-                {currDish?.isActive &&
-                  formatTime.dataAndYear(currDish?.timeStart)}
-              </div>
-              <div className="flex">
-                <p className="font-bold">Giờ vào:&nbsp;</p>{" "}
-                {currDish?.isActive &&
-                  formatTime.hourAndMinute(currDish?.timeStart)}
-              </div>
-              <div className="flex">
-                <p className="font-bold">Thu ngân:&nbsp;</p>{" "}
-                {getInfoToken.getUserNameByToken()}
-              </div>
-            </div>
-          </div>
+      )
+    },
+    {
+      title: 'Số lượng',
+      key: 'quantity',
+      width: 130,
+      render: (_, record) => (
+        <div className="flex items-center border border-gray-200 rounded-lg">
+          <button
+            onClick={() => handleQuantityChange(record.key, -1)}
+            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100"
+          >
+            <MdRemove />
+          </button>
+          <span className="w-8 text-center font-medium text-gray-700 text-sm">{record.quantity}</span>
+          <button
+            onClick={() => handleQuantityChange(record.key, 1)}
+            className="w-8 h-8 flex items-center justify-center text-gray-500 hover:bg-gray-100"
+          >
+            <MdAdd />
+          </button>
+        </div>
+      )
+    },
+    {
+      title: 'Ghi chú',
+      dataIndex: 'notes',
+      key: 'notes',
+      render: (text, record) => (
+        <Input
+          value={text}
+          onChange={(e) => handleNoteChange(record.key, e.target.value)}
+          placeholder="..."
+          className="w-full text-xs"
+          maxLength={50}
+          variant="borderless"
+          style={{ borderBottom: '1px solid #f0f0f0', borderRadius: 0, paddingLeft: 0 }}
+        />
+      )
+    },
+    {
+      title: '',
+      key: 'action',
+      width: 50,
+      render: (_, record) => (
+        <Popconfirm title="Xóa món này?" onConfirm={() => handleDeleteItem(record.key)}>
+          <button className="text-red-400 hover:text-red-600 p-2"><MdOutlineDeleteSweep size={20} /></button>
+        </Popconfirm>
+      )
+    }
+  ];
 
-          <h1 className="text-center mt-5 font-bold border-b-2 text-[20px]">
-            Hóa đơn
-          </h1>
-          <div className="text-[15px] pl-2 border-l-2">
-            <div className="grid grid-cols-1 grid-rows-3 gap-1">
-              <div className="flex">
-                <p className="font-bold">Thời gian:&nbsp;</p>{" "}
-                {currDish?.isActive &&
-                  formatTime.formatMinute(currDish?.timeStart)}
-              </div>
-              <div className="flex">
-                <p className="font-bold">Tổng số lượng:&nbsp;</p>
-                <p> {totalPayment.totalQuantity}</p>
-              </div>
-              <div className="flex">
-                <p className="font-bold">Tạm tính:&nbsp;</p>
-                <p className="text-red-600">
-                  {validatePriceVND("" + totalPayment.totalPrice)}đ
-                </p>
-              </div>
-            </div>
-          </div>
+  return (
+    <div className="min-h-screen bg-gray-50/50 pb-20">
+      {update && <LoadingSyncLoader />}
 
-          <div className="grid grid-cols-2 grid-rows-2 gap-4 pl-2 border-l-2 mt-2">
-            <div>
+      {/* Modals */}
+      <Modal
+        open={openAddDishModal}
+        width="85%" // Wider modal for Dish selection
+        style={{ top: 20 }}
+        onCancel={() => setOpenAddDishModal(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <Dish onSubmit={(items) => handleMergeDishes(items)} />
+      </Modal>
+
+      <Modal
+        open={openSwitchTableModal}
+        width="70%"
+        title={<div className="text-lg font-bold flex items-center gap-2"><FaExchangeAlt /> Chuyển bàn</div>}
+        onCancel={() => setOpenSwitchTableModal(false)}
+        footer={null}
+        destroyOnClose
+      >
+        <div className="h-[70vh] overflow-y-auto">
+          <TablesByArea onClick={table => handleSwitchTable(table)} />
+        </div>
+      </Modal>
+
+      <Modal
+        open={isModalVisible}
+        title="Hủy bàn & Hóa đơn"
+        onCancel={() => setIsModalVisible(false)}
+        onOk={handleAbortTable}
+        okText="Xác nhận Hủy"
+        okButtonProps={{ danger: true }}
+      >
+        <TextArea
+          rows={4}
+          placeholder="Nhập lý do hủy bàn..."
+          value={reason}
+          onChange={e => setReason(e.target.value)}
+        />
+      </Modal>
+
+
+      {/* Header */}
+      <div className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-10 hidden md:block">
+        <div className="max-w-7xl mx-auto px-4 py-3">
+          <Breadcrumb
+            items={[
+              { name: "Khu vực bàn", href: routes.tables_by_area },
+              { name: `Bàn ${currDish?.nameTable || table?.name || "..."}`, href: "" },
+            ]}
+          />
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 py-6 grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+        {/* Left: Cart / Dish List */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/30">
+              <h2 className="font-bold text-gray-800 text-lg">Danh sách món</h2>
               <Button
-                disabled={!currDish?.isActive}
-                onClick={handleChangeTable}
-                className="w-full bg-blue-600 text-[var(--textlight)]"
+                type="primary"
+                icon={<FaPlus />}
+                onClick={() => setOpenAddDishModal(true)}
+                className="bg-orange-500 hover:bg-orange-600 border-orange-500 shadow-sm"
               >
-                <FaArrowsTurnRight /> Chuyển bàn
+                Thêm món
               </Button>
             </div>
-            <div>
-              {currDish?.isActive ? (
-                <Button
-                  onClick={handleUpdate}
-                  className="w-full bg-orange-600 text-[var(--textlight)]"
-                >
-                  <RxUpdate /> Cập nhật
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleOpenTable}
-                  className="w-full bg-orange-600 text-[var(--textlight)]"
-                >
-                  <FaOpenid /> Tạo bàn
-                </Button>
+
+            <div className="p-0">
+              <Table
+                dataSource={data}
+                columns={columns}
+                pagination={false}
+                rowKey="key"
+                locale={{ emptyText: <Empty description="Chưa có món nào được gọi" image={Empty.PRESENTED_IMAGE_SIMPLE} /> }}
+              />
+            </div>
+          </div>
+        </div>
+
+
+        {/* Right: Summary & Actions */}
+        <div className="lg:col-span-1">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 sticky top-24">
+            {/* Table Info Header */}
+            <div className="p-5 border-b border-gray-100 bg-blue-50/50">
+              <div className="flex justify-between items-start mb-2">
+                <div>
+                  <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                    <MdEventSeat className="text-blue-500" />
+                    {currDish?.nameTable || table?.name}
+                  </h3>
+                  <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
+                    <Tag color="cyan">{currDish?.areaName || "Khu vực"}</Tag>
+                    {currDish?.isActive ? (
+                      <BadgeStatus active text="Đang phục vụ" />
+                    ) : (
+                      <BadgeStatus text="Bàn trống" />
+                    )}
+                  </div>
+                </div>
+                {currDish?.isActive && (
+                  <div className="text-right">
+                    <div className="text-xs text-gray-400 flex items-center justify-end gap-1">
+                      <MdAccessTime /> Giờ vào
+                    </div>
+                    <div className="font-mono font-medium text-gray-700">
+                      {formatTime.hourAndMinute(currDish?.timeStart)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Pricing Summary */}
+            <div className="p-6 space-y-4">
+              <div className="flex justify-between items-center text-gray-600">
+                <span>Tổng số lượng:</span>
+                <span className="font-medium text-gray-900">{totalQuantity}</span>
+              </div>
+              <Divider style={{ margin: '12px 0' }} />
+              <div className="flex justify-between items-center">
+                <span className="text-lg font-bold text-gray-800">Tạm tính:</span>
+                <span className="text-2xl font-bold text-red-600">{validatePriceVND(String(totalPrice))}đ</span>
+              </div>
+            </div>
+
+            {/* Action Buttons Grid */}
+            <div className="p-5 bg-gray-50 flex flex-col gap-3">
+              {/* Primary Action: Update / Create */}
+              <Button
+                type="primary"
+                size="large"
+                block
+                icon={currDish?.isActive ? <RxUpdate /> : <IoSaveOutline />}
+                onClick={handleUpdateOrder}
+                className="bg-blue-600 hover:bg-blue-700 border-none h-12 text-base shadow-sm"
+              >
+                {currDish?.isActive ? "Cập nhật đơn" : "Mở bàn & Lưu đơn"}
+              </Button>
+
+              {/* Secondary Actions (Only if active) */}
+              {currDish?.isActive && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    block
+                    icon={<MdOutlinePayments />}
+                    onClick={handlePayment}
+                    className="border-green-600 text-green-600 hover:bg-green-50 h-10"
+                  >
+                    Thanh toán
+                  </Button>
+                  <Button
+                    block
+                    icon={<FaExchangeAlt />}
+                    onClick={() => setOpenSwitchTableModal(true)}
+                    className="border-orange-500 text-orange-500 hover:bg-orange-50 h-10"
+                  >
+                    Chuyển bàn
+                  </Button>
+                  <Button
+                    danger
+                    block
+                    className="col-span-2"
+                    icon={<IoCloseCircleOutline />}
+                    onClick={() => setIsModalVisible(true)}
+                  >
+                    Hủy bàn
+                  </Button>
+                </div>
               )}
-            </div>
-            <div>
-              <Button
-                disabled={!currDish?.isActive}
-                onClick={handlePayment}
-                className="w-full bg-green-600 text-[var(--textlight)]"
-              >
-                <MdOutlinePayments /> Thanh toán
-              </Button>
-            </div>
-            <div>
-              <Button
-                disabled={!currDish?.isActive}
-                onClick={handlecancel}
-                className="w-full bg-red-600 text-[var(--textlight)]"
-              >
-                <IoCloseCircleOutline /> Hủy bàn
-              </Button>
             </div>
           </div>
         </div>
@@ -601,5 +522,13 @@ function ChooseDishForTable() {
     </div>
   );
 }
+
+// Small UI Helper
+const BadgeStatus = ({ active, text }) => (
+  <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium ${active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+    <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+    {text}
+  </span>
+);
 
 export default ChooseDishForTable;
