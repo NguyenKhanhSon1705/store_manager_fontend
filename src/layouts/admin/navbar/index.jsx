@@ -8,6 +8,7 @@ import { BsArrowBarUp } from "react-icons/bs";
 import { FiSearch } from "react-icons/fi";
 import { RiMoonFill, RiSunFill } from "react-icons/ri";
 import { IoMdNotificationsOutline } from "react-icons/io";
+import { MdDashboard } from "react-icons/md";
 
 import Dropdown from "~/components/dropdown";
 import { logout } from "~/store/actions/authAction";
@@ -36,185 +37,162 @@ const Navbar = (props) => {
 
   const handleLogout = () => {
     confirm({
-      title: "Bạn có muốn đăng xuất không",
-      content: "Đăng xuất từ ứng dụng",
+      title: "Xác nhận đăng xuất",
+      content: "Bạn có chắc chắn muốn rời khỏi hệ thống?",
       okText: "Đăng xuất",
       cancelText: "Hủy",
       centered: true,
+      okButtonProps: { danger: true },
       onOk() {
         dispatch(logout());
       },
-      onCancel() {},
     });
   };
+
   return (
-    <nav className="sticky top-4 z-40 flex flex-row flex-wrap items-center justify-between rounded-xl bg-white/10 p-2 backdrop-blur-xl dark:bg-[#0b14374d]">
+    <nav className="sticky top-4 z-40 flex flex-row flex-wrap items-center justify-between rounded-2xl bg-white/40 p-2 backdrop-blur-2xl dark:bg-[#0b14374d] border border-white/20 dark:border-navy-700 transition-all">
       <div className="ml-[6px]">
-        <div className="h-6 w-[224px] pt-1">
+        <div className="h-6 pt-1 flex items-center gap-1">
           <a
-            className="text-sm font-normal text-navy-700 hover:underline dark:text-white dark:hover:text-white"
-            href=" "
+            className="text-xs font-medium text-gray-500 hover:text-orange-500 transition-colors dark:text-gray-400"
+            href="#"
           >
-            Pages
-            <span className="mx-1 text-sm text-navy-700 hover:text-navy-700 dark:text-white">
-              /{" "}
-            </span>
+            Trang chủ
           </a>
+          <span className="text-gray-400 text-xs">/</span>
           <Link
-            className="text-sm font-normal capitalize text-navy-700 hover:underline dark:text-white dark:hover:text-white"
+            className="text-xs font-semibold capitalize text-orange-600 dark:text-orange-400"
             to="#"
           >
-            {brandText}
+            {brandText?.replace('admin/', '') || 'Dashboard'}
           </Link>
         </div>
-        <p className="shrink text-[24px] mt-2 capitalize text-navy-700 dark:text-white">
+        <p className="shrink text-[20px] mt-1 capitalize text-navy-700 dark:text-white">
           <Link
             to="#"
-            className="font-bold capitalize hover:text-navy-700 dark:hover:text-white"
+            className="font-black tracking-tight hover:text-orange-500 transition-colors"
           >
-            {shopName}
+            {shopName || "Cửa hàng của tôi"}
           </Link>
         </p>
       </div>
 
-      <div className="relative mt-[3px] flex h-[61px] w-[355px] flex-grow items-center justify-around gap-2 rounded-full bg-white px-2 py-2 shadow-xl shadow-shadow-500 dark:!bg-navy-800 dark:shadow-none md:w-[365px] md:flex-grow-0 md:gap-1 xl:w-[365px] xl:gap-2">
-        <div className="flex h-full items-center rounded-full bg-lightPrimary text-navy-700 dark:bg-navy-900 dark:text-white xl:w-[225px]">
-          <p className="pl-3 pr-2 text-xl">
-            <FiSearch className="h-4 w-4 text-gray-400 dark:text-white" />
-          </p>
+      <div className="flex items-center gap-3 bg-white/70 dark:bg-navy-800 p-1.5 rounded-2xl shadow-sm border border-white/50 dark:border-navy-700">
+        <div className="hidden md:flex items-center bg-gray-50 dark:bg-navy-900 rounded-xl px-3 py-1.5 border border-transparent focus-within:border-orange-500/30 focus-within:bg-white transition-all w-60">
+          <FiSearch className="text-gray-400" />
           <input
             type="text"
-            placeholder="Search..."
-            className="block h-full w-full rounded-full bg-lightPrimary text-sm font-medium text-navy-700 outline-none placeholder:!text-gray-400 dark:bg-navy-900 dark:text-white dark:placeholder:!text-white sm:w-fit"
+            placeholder="Tìm nhanh..."
+            className="ml-2 bg-transparent text-sm font-medium text-navy-700 outline-none placeholder:text-gray-400 dark:text-white dark:placeholder:text-gray-500 w-full"
           />
         </div>
-        <span
-          className="flex cursor-pointer text-xl text-gray-600 dark:text-white xl:hidden"
+
+        <button
+          className="md:hidden p-2 text-gray-600 dark:text-white hover:bg-gray-100 rounded-lg"
           onClick={onOpenSidenav}
         >
-          <FiAlignJustify className="h-5 w-5" />
-        </span>
-        {/* start Notification */}
-        <Dropdown
-          button={
-            <p className="cursor-pointer">
-              <IoMdNotificationsOutline className="h-4 w-4 text-gray-600 dark:text-white" />
-            </p>
-          }
-          animation="origin-[65%_0%] md:origin-top-right transition-all duration-300 ease-in-out"
-          // eslint-disable-next-line react/no-children-prop
-          children={
-            <div className="flex w-[360px] flex-col gap-3 rounded-[20px] bg-white p-4 shadow-xl shadow-shadow-500 dark:!bg-navy-700 dark:text-white dark:shadow-none sm:w-[460px]">
-              <div className="flex items-center justify-between">
-                <p className="text-base font-bold text-navy-700 dark:text-white">
-                  Notification
-                </p>
-                <p className="text-sm font-bold text-navy-700 dark:text-white">
-                  Mark all read
-                </p>
+          <FiAlignJustify size={20} />
+        </button>
+
+        <div className="flex items-center gap-1 border-l border-gray-100 dark:border-navy-700 ml-1 pl-2">
+          {/* Notifications */}
+          <Dropdown
+            button={
+              <div className="p-2 text-gray-500 dark:text-white hover:bg-orange-50 dark:hover:bg-navy-700 rounded-xl transition-colors cursor-pointer relative">
+                <IoMdNotificationsOutline size={20} />
+                <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
               </div>
-
-              <button className="flex w-full items-center">
-                <div className="flex h-full w-[85px] items-center justify-center rounded-xl bg-gradient-to-b from-brandLinear to-brand-500 py-4 text-2xl text-white">
-                  <BsArrowBarUp />
-                </div>
-                <div className="ml-2 flex h-full w-full flex-col justify-center rounded-lg px-1 text-sm">
-                  <p className="mb-1 text-left text-base font-bold text-gray-900 dark:text-white">
-                    New Update: Horizon UI Dashboard PRO
-                  </p>
-                  <p className="font-base text-left text-xs text-gray-900 dark:text-white">
-                    A new update for your downloaded item is available!
-                  </p>
-                </div>
-              </button>
-
-              <button className="flex w-full items-center">
-                <div className="flex h-full w-[85px] items-center justify-center rounded-xl bg-gradient-to-b from-brandLinear to-brand-500 py-4 text-2xl text-white">
-                  <BsArrowBarUp />
-                </div>
-                <div className="ml-2 flex h-full w-full flex-col justify-center rounded-lg px-1 text-sm">
-                  <p className="mb-1 text-left text-base font-bold text-gray-900 dark:text-white">
-                    New Update: Horizon UI Dashboard PRO
-                  </p>
-                  <p className="font-base text-left text-xs text-gray-900 dark:text-white">
-                    A new update for your downloaded item is available!
-                  </p>
-                </div>
-              </button>
-            </div>
-          }
-          classNames={"py-2 top-4 -left-[230px] md:-left-[440px] w-max"}
-        />
-
-        <div
-          className="cursor-pointer text-gray-600"
-          onClick={() => {
-            onClick(darkmode ? "light" : "dark");
-            if (darkmode) {
-              document.body.classList.remove("dark");
-              setDarkmode(false);
-            } else {
-              document.body.classList.add("dark");
-              setDarkmode(true);
             }
-          }}
-        >
-          {darkmode ? (
-            <RiSunFill className="h-4 w-4 text-gray-600 dark:text-white" />
-          ) : (
-            <RiMoonFill className="h-4 w-4 text-gray-600 dark:text-white" />
-          )}
-        </div>
-        {/* Profile & Dropdown */}
-        <Dropdown
-          button={
-            <img
-              className="h-10 w-10 rounded-full"
-              src={picture || images.avt_user_default}
-              alt="Elon Musk"
-            />
-          }
-          // eslint-disable-next-line react/no-children-prop
-          children={
-            <div className="flex w-56 flex-col justify-start rounded-[20px] bg-white bg-cover bg-no-repeat shadow-xl shadow-shadow-500 dark:!bg-navy-700 dark:text-white dark:shadow-none">
-              <div className="p-4">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-bold text-navy-700 dark:text-white">
-                    👋 {fullName || email}
-                  </p>
+            animation="origin-top-right transition-all duration-300 ease-in-out"
+            classNames={"py-2 top-8 -right-[230px] md:-right-[110px] w-max"}
+          >
+            <div className="flex w-[320px] flex-col gap-3 rounded-2xl bg-white p-4 shadow-2xl border border-gray-50 dark:bg-navy-800 dark:text-white dark:border-navy-700">
+              <div className="flex items-center justify-between border-b pb-3 mb-1">
+                <p className="text-md font-bold text-navy-700 dark:text-white">Thông báo</p>
+                <button className="text-xs font-bold text-orange-600 hover:text-orange-500 uppercase tracking-tighter">Đánh dấu đã đọc</button>
+              </div>
+              <div className="space-y-4 max-h-80 overflow-y-auto pr-1">
+                {[1, 2].map(i => (
+                  <div key={i} className="flex gap-3 p-2 hover:bg-gray-50 rounded-xl transition-colors cursor-pointer">
+                    <div className="h-10 w-10 flex-shrink-0 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center">
+                      <BsArrowBarUp size={20} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-800 leading-tight mb-1">Cập nhật hệ thống v2.0</p>
+                      <p className="text-xs text-gray-500 line-clamp-2">Nhiều tính năng mới đã được cập nhật cho phần quản lý...</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <button className="w-full py-2 text-xs font-bold text-gray-400 hover:text-gray-600 text-center">Xem tất cả thông báo</button>
+            </div>
+          </Dropdown>
+
+          {/* Theme Toggle */}
+          <div
+            className="p-2 text-gray-500 dark:text-white hover:bg-orange-50 dark:hover:bg-navy-700 rounded-xl transition-colors cursor-pointer"
+            onClick={() => {
+              onClick(darkmode ? "light" : "dark");
+              if (darkmode) {
+                document.body.classList.remove("dark");
+                setDarkmode(false);
+              } else {
+                document.body.classList.add("dark");
+                setDarkmode(true);
+              }
+            }}
+          >
+            {darkmode ? <RiSunFill size={20} /> : <RiMoonFill size={20} />}
+          </div>
+
+          {/* User Profile */}
+          <div className="ml-1 pl-1">
+            <Dropdown
+              button={
+                <div className="flex items-center gap-2 p-1 pl-2 hover:bg-gray-50 dark:hover:bg-navy-700 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-gray-200">
+                  <div className="hidden lg:block text-right mr-1">
+                    <p className="text-xs font-bold text-gray-800 dark:text-white leading-none mb-1">{fullName?.split(' ').pop() || 'User'}</p>
+                    <p className="text-[10px] text-gray-400 font-medium leading-none">Chủ cửa hàng</p>
+                  </div>
+                  <img
+                    className="h-9 w-9 rounded-lg object-cover ring-2 ring-white dark:ring-navy-800"
+                    src={picture || images.avt_user_default}
+                    alt="User"
+                  />
+                </div>
+              }
+              classNames={"py-2 top-8 -right-[10px] w-max"}
+            >
+              <div className="flex w-64 flex-col rounded-2xl bg-white shadow-2xl border border-gray-50 dark:bg-navy-800 dark:text-white dark:border-navy-700 overflow-hidden">
+                <div className="bg-gradient-to-r from-orange-500 to-red-500 p-6 text-white">
+                  <p className="text-xs font-medium text-white/80 mb-1">Xin chào,</p>
+                  <p className="text-lg font-bold truncate">{fullName || email}</p>
+                  <p className="text-[10px] text-white/70 mt-3 truncate">{email}</p>
+                </div>
+
+                <div className="p-2 space-y-1">
+                  <Link to="#" className="flex items-center gap-3 p-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-navy-700 hover:text-orange-600 rounded-xl transition-all">
+                    <span>Hồ sơ cá nhân</span>
+                  </Link>
+                  <Link to="#" className="flex items-center gap-3 p-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-orange-50 dark:hover:bg-navy-700 hover:text-orange-600 rounded-xl transition-all">
+                    <span>Cài đặt bảo mật</span>
+                  </Link>
+                  <div className="h-px bg-gray-100 dark:bg-navy-700 my-2 mx-2" />
+                  <Link to={ROUTE_PATH.tables_by_area} className="flex items-center gap-3 p-3 text-sm font-bold text-orange-600 hover:bg-orange-600 hover:text-white rounded-xl transition-all">
+                    <MdDashboard />
+                    <span>Màn hình Bán hàng</span>
+                  </Link>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 p-3 text-sm font-bold text-red-500 hover:bg-red-50 rounded-xl transition-all mt-2"
+                  >
+                    Đăng xuất
+                  </button>
                 </div>
               </div>
-              <div className="h-px w-full bg-gray-200 dark:bg-white/20 " />
-
-              <div className="flex flex-col p-4">
-                <a
-                  href=" "
-                  className="text-sm text-gray-800 dark:text-white hover:dark:text-white"
-                >
-                  Profile Settings
-                </a>
-                <a
-                  href=" "
-                  className="mt-3 text-sm text-gray-800 dark:text-white hover:dark:text-white"
-                >
-                  Newsletter Settings
-                </a>
-                <Link to={ROUTE_PATH.tables_by_area} className="w-full ">
-                  <Button className="mt-3 w-full text-sm font-medium transition duration-150 ease-out hover:ease-in">
-                    Bàn hàng
-                  </Button>
-                </Link>
-                <Button
-                  onClick={() => handleLogout()}
-                  className="mt-3 text-sm font-medium text-red-500 hover:text-red-500 transition duration-150 ease-out hover:ease-in"
-                >
-                  Đăng xuất
-                </Button>
-              </div>
-            </div>
-          }
-          classNames={"py-2 top-8 -left-[180px] w-max"}
-        />
+            </Dropdown>
+          </div>
+        </div>
       </div>
     </nav>
   );

@@ -23,50 +23,32 @@ const items = [
         key: "7",
         label: (
           <Link className="font-poppins" to={ROUTE_PATH_ADMIN.ADMIN_DASHBOARD}>
-            Thống kê
+            Bảng điều khiển
+          </Link>
+        ),
+        icon: <AiOutlineBarChart />,
+      },
+      {
+        key: "8",
+        label: (
+          <Link className="font-poppins" to={ROUTE_PATH_ADMIN.ADMIN_STATISTIC}>
+            Thống kê doanh thu
           </Link>
         ),
         icon: <MdOutlineSummarize />,
       },
       {
-        key: "8",
-        label: (
-          <Link className="font-poppins" to={ROUTE_PATH_ADMIN.ADMIN_DASHBOARD}>
-            Hoạt động
-          </Link>
-        ),
-        icon: <VscVmActive />,
-      },
-      {
         key: "91",
         label: (
           <Link className="font-poppins" to={ROUTE_PATH_ADMIN.ADMIN_TABLES}>
-            Bàn
+            Quản lý Sơ đồ
           </Link>
         ),
-        icon: <VscVmActive />,
-      },
-      
-      {
-        key: "92",
-        label: (
-          <Link className="font-poppins" to={ROUTE_PATH_ADMIN.ADMIN_MARKET}>
-            Bàn
-          </Link>
-        ),
-        icon: <VscVmActive />,
-      },
-      {
-        key: "96",
-        label: (
-          <Link className="font-poppins" to={ROUTE_PATH_ADMIN.ADMIN_PROFILE}>
-            Bàn
-          </Link>
-        ),
-        icon: <VscVmActive />,
+        icon: <MdTableChart />,
       },
     ],
   },
+
   {
     key: "sub3",
     label: "Khu vực - Phòng bàn",

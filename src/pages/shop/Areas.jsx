@@ -1,9 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useDispatch, useSelector } from "react-redux";
-
+import {
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  Space,
+  Tooltip,
+  Popconfirm,
+  Card,
+  Typography
+} from "antd";
 import { FaRegEdit } from "react-icons/fa";
-import { MdDeleteOutline } from "react-icons/md";
-import { MdAdd } from "react-icons/md";
+import { MdDeleteOutline, MdAdd } from "react-icons/md";
 
 import {
   createArea,
@@ -11,150 +21,179 @@ import {
   getListAreas,
   updateArea,
 } from "../../store/actions/areasAction";
-import LoadingSkeleton from "../../components/loading/LoadingSkeleton";
-import DialogCustom from "../../components/dialog/DialogCustom";
 import Breadcrumb from "../../components/helper/Breadcrumb";
-import Button from "../../components/buttons/Button";
-import { Modal } from "antd";
+import LoadingSyncLoader from "../../components/loading/LoadingSyncLoader";
 
-const {confirm} = Modal
-const fields = [
-  {
-    name: "areaName",
-    label: "Khu vực",
-    type: "text",
-    required: true,
-    autoFocus: true,
-  },
-];
+const { Title } = Typography;
 
 function Areas() {
   const dispatch = useDispatch();
-  const { data, loading } = useSelector((state) => state.area);
-  const [openDialog, setOpenDialog] = useState(false);
-  const [openDialogCreate, setOpenDialogCreate] = useState(false);
+  const { data, loading, update } = useSelector((state) => state.area);
 
-  const [details, setDetails] = useState({});
+  const [form] = Form.useForm();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
 
   useEffect(() => {
     dispatch(getListAreas());
   }, [dispatch]);
 
-  const handleGetDetails = (item) => {
-    setDetails(item);
-    setOpenDialog(true);
+  const handleOpenModal = (item = null) => {
+    setSelectedItem(item);
+    if (item) {
+      form.setFieldsValue({ areaName: item.areaName });
+    } else {
+      form.resetFields();
+    }
+    setIsModalOpen(true);
   };
 
-  const handleDialogSubmitCreate = (item) => {
-    dispatch(createArea(item));
+  const handleCancel = () => {
+    setIsModalOpen(false);
+    setSelectedItem(null);
+    form.resetFields();
   };
 
-  const handleDialogSubmit = (data) => {
-    dispatch(updateArea(data));
+  const onFinish = (values) => {
+    if (selectedItem) {
+      dispatch(updateArea({ ...values, id: selectedItem.id }));
+    } else {
+      dispatch(createArea(values));
+    }
+    handleCancel();
   };
-  // delete
-  const handleDialogSubmitDelete = (items) => {
-    confirm({
-      title: "Bạn chắc chắn xóa món ăn này không ?",
-      okText: "Xóa",
-      okType: "danger",
-      cancelText: "Hủy",
-      centered: true,
-      onOk() {
-        dispatch(deleteArea(items));
-      },
-    });
+
+  const handleDelete = (id) => {
+    dispatch(deleteArea(id));
   };
-  return (
-    <div>
-     
-      <DialogCustom
-        open={openDialog}
-        onClose={() => setOpenDialog(false)}
-        onSubmit={handleDialogSubmit}
-        item={details}
-        fields={fields}
-      />
 
-      <DialogCustom
-        open={openDialogCreate}
-        onClose={() => setOpenDialogCreate(false)}
-        onSubmit={handleDialogSubmitCreate}
-        item={{ areaName: "" }}
-        fields={fields}
-      />
-
-      <div>
-        <Breadcrumb items={[{ name: "Thông tin khu vực", href: "" }]} />
-      </div>
-      {loading ? (
-        <LoadingSkeleton />
-      ) : (
-        <div>
-          <div className="flex justify-end text-[18px] mb-2">
+  const columns = [
+    {
+      title: "#",
+      key: "index",
+      align: "center",
+      width: 80,
+      render: (text, record, index) => index + 1,
+    },
+    {
+      title: "Tên Khu vực",
+      dataIndex: "areaName",
+      key: "areaName",
+      render: (text) => <span className="font-medium text-gray-700">{text}</span>,
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      width: 150,
+      align: "center",
+      render: (_, record) => (
+        <Space size="middle">
+          <Tooltip title="Chỉnh sửa">
             <Button
-              onClick={() => setOpenDialogCreate(true)}
-              rounded={true}
-              leftIcon={<MdAdd />}
-              className="flex items-center bg-[var(--bg-btn-add)] p-2 text-[var(--textlight)] rounded-sm"
-            >
-              Thêm khu vực
-            </Button>
-          </div>
-          <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
-            <table className="w-full text-sm text-left rtl:text-right ">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-50 ">
-                <tr>
-                  <th scope="col" className="px-6 py-3">
-                    #
-                  </th>
-                  <th scope="col" className="px-6 py-3">
-                    Khu vực
-                  </th>
-                  <th scope="col" className="px-6 py-3 w-[15%] ">
-                    Thao tác
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.length > 0 &&
-                  data.map((item, index) => {
-                    return (
-                      <tr
-                        key={item?.id}
-                        className="odd:bg-gray-200 even:bg-white border-b "
-                      >
-                        <th
-                          scope="row"
-                          className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap"
-                        >
-                          {(index += 1)}
-                        </th>
-                        <td className="px-6 py-4">{item?.areaName}</td>
-                        <td className="px-6 py-4">
-                          <button
-                            onClick={() => handleGetDetails(item)}
-                            className="font-medium p-2 text-white rounded-md text-[16px] mr-1 bg-[var(--bg-btn-edit)] hover:opacity-70 "
-                          >
-                            <FaRegEdit />
-                          </button>
-                          <button
-                            onClick={() => handleDialogSubmitDelete(item?.id)}
-                            className="font-medium p-2 text-white rounded-md text-[16px]  ml-1 bg-[var(--bg-btn-delete)] hover:opacity-70"
-                          >
-                            <MdDeleteOutline />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+              type="text"
+              icon={<FaRegEdit className="text-blue-500" size={18} />}
+              onClick={() => handleOpenModal(record)}
+              className="hover:bg-blue-50"
+            />
+          </Tooltip>
+          <Popconfirm
+            title="Xóa khu vực"
+            description="Bạn có chắc chắn muốn xóa khu vực này?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+          >
+            <Tooltip title="Xóa">
+              <Button
+                type="text"
+                icon={<MdDeleteOutline className="text-red-500" size={20} />}
+                className="hover:bg-red-50"
+              />
+            </Tooltip>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
+  return (
+    <div className="flex flex-col gap-4 p-2 h-full">
+      {update && <LoadingSyncLoader />}
+
+      {/* Header Section */}
+      <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <Breadcrumb items={[{ name: "Quản lý khu vực", href: "" }]} />
+        <Button
+          type="primary"
+          icon={<MdAdd size={20} />}
+          onClick={() => handleOpenModal()}
+          className="bg-gradient-to-r from-orange-500 to-red-500 border-0 shadow-md shadow-orange-200"
+          size="large"
+        >
+          Thêm khu vực
+        </Button>
+      </div>
+
+      {/* Main Table Content */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <Table
+          columns={columns}
+          dataSource={data || []}
+          loading={loading}
+          rowKey="id"
+          pagination={{
+            pageSize: 10,
+            showTotal: (total) => `Tổng ${total} khu vực`,
+          }}
+          className="w-full"
+          rowClassName="hover:bg-gray-50 transition-colors"
+        />
+      </div>
+
+      {/* Form Modal */}
+      <Modal
+        title={
+          <Title level={4} style={{ margin: 0 }}>
+            {selectedItem ? "Cập nhật khu vực" : "Thêm khu vực mới"}
+          </Title>
+        }
+        open={isModalOpen}
+        onCancel={handleCancel}
+        footer={[
+          <Button key="cancel" onClick={handleCancel}>
+            Hủy
+          </Button>,
+          <Button
+            key="submit"
+            type="primary"
+            onClick={() => form.submit()}
+            className="bg-orange-600 hover:bg-orange-500 border-none px-6"
+          >
+            {selectedItem ? "Cập nhật" : "Lưu"}
+          </Button>,
+        ]}
+        centered
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={onFinish}
+          className="mt-6"
+          initialValues={{ areaName: "" }}
+        >
+          <Form.Item
+            name="areaName"
+            label="Tên khu vực"
+            rules={[{ required: true, message: "Vui lòng nhập tên khu vực!" }]}
+          >
+            <Input size="large" placeholder="Ví dụ: Tầng 1, Sân vườn..." autoFocus />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
 
 export default Areas;
+

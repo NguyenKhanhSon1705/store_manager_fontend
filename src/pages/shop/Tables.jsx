@@ -1,6 +1,14 @@
 import { memo, useCallback, useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
-
+import {
+  Table,
+  Button,
+  Tag,
+  Space,
+  Tooltip,
+  Popconfirm,
+  Card
+} from "antd";
 import { FaRegEdit } from "react-icons/fa";
 import { MdAdd, MdDeleteOutline } from "react-icons/md";
 
@@ -11,173 +19,180 @@ import {
   getListTables,
   updateTables,
 } from "../../store/actions/tablesAction";
-import LoadingSkeleton from "../../components/loading/LoadingSkeleton";
-import Button from "../../components/buttons/Button";
 import DialogCreateTables from "../../components/dialog/DialogCreateTables";
-import { Modal } from "antd";
-
-const { confirm } = Modal;
+import LoadingSyncLoader from "../../components/loading/LoadingSyncLoader";
 
 function Tables() {
   const dispatch = useDispatch();
-  const { data, loading } = useSelector((state) => state.table);
+  const { data, loading, update } = useSelector((state) => state.table);
   const [openDialog, setOpenDialog] = useState(false);
-  const [opentUpdate, setOpenUpdate] = useState({ open: false, items: {} });
+  const [updateInfo, setUpdateInfo] = useState({ open: false, items: null });
 
   useEffect(() => {
     dispatch(getListTables());
   }, [dispatch]);
 
   const handleUpdate = (item) => {
-    setOpenUpdate({ open: true, items: item });
+    setUpdateInfo({ open: true, items: item });
   };
+
   const handleOpenCreate = useCallback(() => {
     setOpenDialog(true);
   }, []);
 
-  const handleSubmitDelete = (items) => {
-    confirm({
-      title: "Bạn chắc chắn xóa món ăn này không ?",
-      okText: "Xóa",
-      okType: "danger",
-      cancelText: "Hủy",
-      centered: true,
-      onOk() {
-        dispatch(deleteTables(items));
-      },
-    });
+  const handleDelete = (id) => {
+    dispatch(deleteTables(id));
   };
 
   const handleCloseDialog = useCallback(() => {
     setOpenDialog(false);
-    setOpenUpdate({ open: false });
+    setUpdateInfo({ open: false, items: null });
   }, []);
 
-  const handleSubmitValue = useCallback(
-    (data) => {
-        console.log(data);
-        
-      dispatch(createTables(data));
+  const handleSubmitCreate = useCallback(
+    (values) => {
+      dispatch(createTables(values));
     },
     [dispatch]
   );
 
   const handleSubmitUpdate = useCallback(
-    (data) => {
-      dispatch(updateTables(data));
+    (values) => {
+      dispatch(updateTables(values));
     },
     [dispatch]
   );
+
+  const columns = [
+    {
+      title: "#",
+      key: "index",
+      align: "center",
+      width: 70,
+      render: (text, record, index) => <span className="text-gray-500">{index + 1}</span>,
+    },
+    {
+      title: "Khu vực",
+      dataIndex: "areaName",
+      key: "areaName",
+      render: (text) => <Tag color="blue" className="rounded-md px-2 py-0.5">{text}</Tag>,
+    },
+    {
+      title: "Phòng / Bàn",
+      dataIndex: "nameTable",
+      key: "nameTable",
+      render: (text) => <span className="font-bold text-gray-800">{text}</span>,
+    },
+    {
+      title: "Tính giờ",
+      dataIndex: "hasHourlyRate",
+      key: "hasHourlyRate",
+      align: "center",
+      render: (hasHourlyRate) => (
+        <Tag color={hasHourlyRate ? "green" : "red"} className="rounded-full w-8 h-8 flex items-center justify-center border-none mx-auto">
+          <div className={`w-3 h-3 rounded-full ${hasHourlyRate ? 'bg-white shadow-[0_0_8px_rgba(255,255,255,0.8)]' : 'bg-white/50'}`}></div>
+        </Tag>
+      ),
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "isActive",
+      key: "isActive",
+      align: "center",
+      render: (isActive) => (
+        <Tag color={isActive ? "success" : "default"} className="rounded-full px-3">
+          {isActive ? "Hoạt động" : "Ngưng"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      align: "right",
+      width: 140,
+      render: (_, record) => (
+        <Space size="middle">
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              type="text"
+              shape="circle"
+              icon={<FaRegEdit className="text-blue-500" size={18} />}
+              onClick={() => handleUpdate(record)}
+              className="hover:bg-blue-50"
+            />
+          </Tooltip>
+          <Popconfirm
+            title="Xóa phòng bàn"
+            description="Bạn có chắc chắn muốn xóa bàn này?"
+            onConfirm={() => handleDelete(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+            okButtonProps={{ danger: true }}
+          >
+            <Tooltip title="Xóa">
+              <Button
+                type="text"
+                shape="circle"
+                icon={<MdDeleteOutline className="text-red-500" size={20} />}
+                className="hover:bg-red-50"
+              />
+            </Tooltip>
+          </Popconfirm>
+        </Space>
+      ),
+    },
+  ];
+
   return (
-    <div>
+    <div className="flex flex-col gap-4 p-2 h-full">
+      {update && <LoadingSyncLoader />}
+
       <DialogCreateTables
-        title="THÊM PHÒNG BÀN"
+        title="Thêm phòng bàn mới"
         open={openDialog}
         onClose={handleCloseDialog}
-        onSubmit={handleSubmitValue}
+        onSubmit={handleSubmitCreate}
       />
 
       <DialogCreateTables
-        title="CẬP NHẬT PHÒNG BÀN"
-        open={opentUpdate.open}
+        title="Cập nhật phòng bàn"
+        open={updateInfo.open}
         onClose={handleCloseDialog}
         onSubmit={handleSubmitUpdate}
-        items={opentUpdate.items}
+        items={updateInfo.items}
       />
 
-      <Breadcrumb items={[{ name: "Thông tin phòng bàn", href: "" }]} />
-      {loading ? (
-        <LoadingSkeleton />
-      ) : (
-        <div>
-          <div className="flex justify-end text-[18px] mb-2">
-            <Button
-              onClick={handleOpenCreate}
-              rounded={true}
-              leftIcon={<MdAdd />}
-              className="flex items-center bg-[var(--bg-btn-add)] p-2 text-[var(--textlight)] rounded-sm"
-            >
-              Thêm
-            </Button>
-          </div>
-          <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
-            <table className="w-full text-sm text-left rtl:text-right ">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-50 ">
-                <tr>
-                  <th scope="col" className="px-4 py-3">
-                    #
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    Khu vực
-                  </th>
-                  <th scope="col" className="px-4 py-3">
-                    Phòng bàn
-                  </th>
-                  <th scope="col" className="px-4 py-3 w-[15%]">
-                    Tính giờ
-                  </th>
-                  <th scope="col" className="px-4 py-3 w-[15%]">
-                    Hoạt động
-                  </th>
-                  <th scope="col" className="px-4 py-3 w-[15%]">
-                    Thao tác
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.length > 0 &&
-                  data.map((item, index) => {
-                    return (
-                      <tr
-                        key={item?.id}
-                        className="odd:bg-gray-200 even:bg-white border-b "
-                      >
-                        <th
-                          scope="row"
-                          className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap"
-                        >
-                          {(index += 1)}
-                        </th>
-                        <td className="px-4 py-3">{item?.areaName}</td>
-                        <td className="px-4 py-3">{item?.nameTable}</td>
-                        <td className="px-4 py-3 ">
-                          {item?.hasHourlyRate ? (
-                            <p className="flex w-1/4 h-5 me-3 ml-2 bg-green-500 rounded-full"></p>
-                          ) : (
-                            <p className="flex w-1/4 h-5 me-3 ml-2 bg-red-500 rounded-full"></p>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 ">
-                          {item?.isActive ? (
-                            <p className="flex w-1/4 h-5 me-3 ml-2 bg-green-500 rounded-full"></p>
-                          ) : (
-                            <p className="flex w-1/4 h-5 me-3 ml-2 bg-red-500 rounded-full"></p>
-                          )}
-                        </td>
-                        <td className="px-4 py-3">
-                          <button
-                            onClick={() => handleUpdate(item)}
-                            className="font-medium p-2 text-white rounded-md text-[16px] mr-1 bg-[var(--bg-btn-edit)] hover:opacity-70 "
-                          >
-                            <FaRegEdit />
-                          </button>
-                          <button
-                            onClick={() => handleSubmitDelete(item?.id)}
-                            className="font-medium p-2 text-white rounded-md text-[16px]  ml-1 bg-[var(--bg-btn-delete)] hover:opacity-70"
-                          >
-                            <MdDeleteOutline />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+        <Breadcrumb items={[{ name: "Quản lý phòng bàn", href: "" }]} />
+        <Button
+          type="primary"
+          icon={<MdAdd size={20} />}
+          onClick={handleOpenCreate}
+          className="bg-gradient-to-r from-orange-500 to-red-500 border-0 shadow-md shadow-orange-200"
+          size="large"
+        >
+          Thêm phòng bàn
+        </Button>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <Table
+          columns={columns}
+          dataSource={data || []}
+          loading={loading}
+          rowKey="id"
+          pagination={{
+            pageSize: 10,
+            showTotal: (total) => `Tổng ${total} bàn`,
+            showSizeChanger: true,
+          }}
+          className="w-full"
+          rowClassName="hover:bg-orange-50/30 transition-colors"
+        />
+      </div>
     </div>
   );
 }
 
 export default memo(Tables);
+

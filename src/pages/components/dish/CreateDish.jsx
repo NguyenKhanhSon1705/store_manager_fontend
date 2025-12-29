@@ -1,489 +1,370 @@
+import { memo, useEffect, useState } from "react";
 import {
-  Button,
-  Checkbox,
+  Modal,
   Form,
-  Image,
   Input,
   InputNumber,
-  Modal,
   Select,
+  Checkbox,
+  Upload,
+  Button,
+  message,
+  Space,
   Tag,
+  Divider,
+  Typography
 } from "antd";
-import { memo, useEffect, useRef, useState } from "react";
+import { PlusOutlined, LoadingOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useDispatch, useSelector } from "react-redux";
 import PropTypes from "prop-types";
-import { toast } from "react-toastify";
-
-import { FiDelete } from "react-icons/fi";
-import { MdAddCircleOutline } from "react-icons/md";
-
-import dishAction from "../../../store/actions/dishAction";
 import { getAllNameMenuGroup } from "../../../store/actions/menuGroupAction";
+import dishAction from "../../../store/actions/dishAction";
+import dishService from "~/services/dishService";
 import images from "../../../assets/images";
 import { validatePriceVND } from "~/utils/validatePriceVND";
-import dishService from "~/services/dishService";
+
 const { Option } = Select;
+const { Text, Title } = Typography;
 
-const { confirm } = Modal;
-function CreateDish({ items }) {
-  const { data } = useSelector((state) => state.menuGroup);
-  const [form] = Form.useForm();
-  const [inputValue, setInputValue] = useState("");
-  const [options, setOptions] = useState([]);
-  const [priceDish, setPriceDish] = useState(null);
-
-  const [selectedImage, setSelectedImage] = useState(images.img_default);
-  const [valueInput, setValueInput] = useState({
-    id: null,
-    Dish_Name: null,
-    Unit_Name: null,
-    Origin_Price: null,
-    Selling_Price: null,
-    Order: null,
-    Status: null,
-    Is_Hot: null,
-    Image_C: null,
-    arr_Menu_Group_Id: [],
-  });
-  const isUpdate = options && Object?.keys(options)?.length !== 0;
+function CreateDish({ open, onCancel, item }) {
   const dispatch = useDispatch();
+  const [form] = Form.useForm();
+  const { data: menuGroups } = useSelector((state) => state.menuGroup);
 
+  const [imageUrl, setImageUrl] = useState(images.img_default);
+  const [fileList, setFileList] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [priceOptions, setPriceOptions] = useState([]);
+
+  // Fetch menu groups on mount
   useEffect(() => {
-    if (items) {
-      setOptions(items.list_price);
-      setPriceDish(null);
-      setSelectedImage(items.image || images.img_default);
-      setValueInput((prev) => ({ ...prev, id: items.id, Image_C: null }));
-
-      form.setFieldsValue({
-        ...items,
-        arr_Menu_Group_Id:
-          items.arr_Menu_Group &&
-          items.arr_Menu_Group.map((item) => ({
-            label: item.name,
-            value: item.id,
-          })),
-      });
-    }
-  }, [form, items]);
-
-  const handleGetValueMenuGroup = () => {
     dispatch(getAllNameMenuGroup());
-  };
-  // Liên quan đến upload ảnh
+  }, [dispatch]);
 
-  const handleSubmitCreate = () => {
-    if (isUpdate) {
-      confirm({
-        title: "Cập nhật món ăn",
-        content: "Bạn có chắc muốn cập nhật món ăn?",
-        onOk: () => {
-          valueInput.Selling_Price = priceDish;
-          console.log(valueInput);
-          
-          dispatch(dishAction.updateDish(valueInput));
-        },
-      });
+  // Reset/Populate form when modal opens or item changes
+  useEffect(() => {
+    if (open) {
+      if (item) {
+        // Edit Mode
+        form.setFieldsValue({
+          ...item,
+          dish_Name: item.dish_Name,
+          unit_Name: item.unit_Name,
+          origin_Price: item.origin_Price,
+          order: item.order,
+          status: item.status,
+          is_Hot: item.is_Hot,
+          arr_Menu_Group_Id: item.arr_Menu_Group?.map(g => g.id),
+          // Set initial selling price to the active one
+          selling_Price: item.list_price?.find(p => p.status)?.selling_price || item.list_price?.[0]?.selling_price
+        });
+        setImageUrl(item.image || images.img_default);
+        setPriceOptions(item.list_price || []);
+      } else {
+        // Create Mode
+        form.resetFields();
+        setImageUrl(images.img_default);
+        setPriceOptions([]);
+
+        // Set default values
+        form.setFieldsValue({
+          status: true,
+          is_Hot: false,
+          order: 1
+        });
+      }
+      setFileList([]);
+    }
+  }, [open, item, form]);
+
+  // --- Image Upload Handlers ---
+  const handleImageChange = ({ fileList: newFileList }) => {
+    setFileList(newFileList);
+    if (newFileList.length > 0) {
+      const file = newFileList[0].originFileObj;
+      const url = URL.createObjectURL(file);
+      setImageUrl(url);
     } else {
-      confirm({
-        title: "Thêm món ăn",
-        content: "Bạn có chắc muốn thêm món ăn?",
-        onOk: () => {
-          dispatch(dishAction.createDish(valueInput));
-        },
-      });
-    }
-  };
-  const handleChooseImage = () => {
-    fileInputRef.current.click();
-  };
-  const formatter = (value) => {
-    if (!value) return value;
-    // Thêm dấu phân cách hàng nghìn
-    return value.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  };
-
-  // Hàm phân tích số khi nhập vào (xóa dấu phân cách)
-  const parser = (value) => {
-    return value.replace(/\$\s?|(,*)/g, "");
-  };
-
-  const fileInputRef = useRef(null);
-  const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    setValueInput((prev) => ({ ...prev, Image_C: file }));
-    if (file) {
-      setSelectedImage(URL.createObjectURL(file));
+      setImageUrl(item?.image || images.img_default);
     }
   };
 
-  const handleCleanForm = () => {
-    form.resetFields();
-    setValueInput({})
-    setOptions({});
-    setSelectedImage(images.img_default);
-  };
-  const handleSelectChange = (value) => {
-    setPriceDish(value);
+  const beforeUpload = (file) => {
+    const isJpgOrPng = file.type === 'image/jpeg' || file.type === 'image/png';
+    if (!isJpgOrPng) {
+      message.error('Bạn chỉ có thể tải lên file JPG/PNG!');
+    }
+    const isLt2M = file.size / 1024 / 1024 < 2;
+    if (!isLt2M) {
+      message.error('Hình ảnh phải nhỏ hơn 2MB!');
+    }
+    return false; // Prevent auto upload
   };
 
-  const handleAddPrice = () => {
-    if (inputValue) {
-      confirm({
-        title: "Thêm giá mới",
-        content: "Bạn có chắc muốn thêm giá mới?",
-        onOk: async () => {
-          const payload = {
-            dish_id: valueInput.id,
-            new_price: inputValue,
-          };
-          const res = await dishService.apiAddPriceDish(payload);
-          if (res.isSuccess) {
-            const newPrice = {
-              selling_price: inputValue,
-              status: false,
-            };
-            setOptions([...options, newPrice]);
-            setInputValue("");
-          }
-        },
-      });
-    }
+  // --- Price Handlers ---
+  const handleAddPrice = (newItem) => {
+    // In a real scenario, adding a price might require an API call if editing, 
+    // or just local state manipulation if creating. 
+    // Based on original code, it calls API immediately.
+    // We will keep it simple for now or follow the pattern.
+    // Original code: await dishService.apiAddPriceDish(payload);
   };
-  const handleDeletePrice = (e, item) => {
-    e.stopPropagation();
-    confirm({
-      title: "Xóa giá",
-      content: "Bạn có chắc muốn xóa giá này?",
-      onOk: async () => {
-        try {
-          const res = await dishService.apiDeletePriceDish(item.price_id); // Đợi kết quả từ API
-          if (res.isSuccess) {
-            setOptions((prevOptions) =>
-              prevOptions.filter((price) => price.price_id !== item.price_id)
-            );
-            console.log("Xóa giá thành công", res);
-          } else {
-            console.error(
-              "Xóa giá thất bại",
-              res.message || "Lỗi không xác định"
-            );
-          }
-        } catch (error) {
-          console.error("Đã xảy ra lỗi khi xóa giá:", error);
+
+  // Custom dropdown for Price Select to allow adding new prices
+  const [newPriceInput, setNewPriceInput] = useState("");
+  const addItem = async (e) => {
+    e.preventDefault();
+    if (!newPriceInput) return;
+
+    // Only call API if we are in Edit mode (have an ID)
+    if (item?.id) {
+      try {
+        const payload = { dish_id: item.id, new_price: newPriceInput };
+        const res = await dishService.apiAddPriceDish(payload);
+        if (res.isSuccess) {
+          const newPriceObj = { selling_price: parseInt(newPriceInput), status: false, price_id: Date.now() }; // Mock ID if API doesn't return one immediately or refresh
+          // Ideally we should refresh the item data, but let's update local state
+          setPriceOptions([...priceOptions, newPriceObj]);
+          setNewPriceInput("");
+          message.success("Thêm giá thành công!");
         }
-      },
-    });
+      } catch (error) {
+        message.error("Lỗi thêm giá");
+      }
+    } else {
+      // Create mode: just add to options, logic might be different for backend
+      // For now, let's assume create mode only takes one price from the main input
+      message.info("Vui lòng tạo món ăn trước khi thêm nhiều mức giá");
+    }
   };
+
+  const handleDeletePrice = async (e, priceItem) => {
+    e.stopPropagation();
+    if (item?.id) {
+      try {
+        const res = await dishService.apiDeletePriceDish(priceItem.price_id);
+        if (res.isSuccess) {
+          setPriceOptions(prev => prev.filter(p => p.price_id !== priceItem.price_id));
+          message.success("Xóa giá thành công");
+        }
+      } catch (err) {
+        message.error("Lỗi xóa giá");
+      }
+    }
+  }
+
+  // --- Submit Handler ---
+  const onFinish = (values) => {
+    const submitData = {
+      ...values,
+      id: item?.id,
+      Image_C: fileList.length > 0 ? fileList[0].originFileObj : undefined,
+      // Map fields to match API expectations if they differ from Form names
+      // Original: Dish_Name, Unit_Name, etc.
+      // It seems the action expects PascalCase or specific keys.
+      Dish_Name: values.dish_Name,
+      Unit_Name: values.unit_Name,
+      Origin_Price: values.origin_Price,
+      Selling_Price: values.selling_Price,
+      Order: values.order,
+      Status: values.status,
+      Is_Hot: values.is_Hot,
+      arr_Menu_Group_Id: values.arr_Menu_Group_Id
+    };
+
+    if (item?.id) {
+      dispatch(dishAction.updateDish(submitData));
+    } else {
+      dispatch(dishAction.createDish(submitData));
+    }
+    onCancel();
+  };
+
+  const uploadButton = (
+    <div>
+      {loading ? <LoadingOutlined /> : <PlusOutlined />}
+      <div style={{ marginTop: 8 }}>Tải ảnh</div>
+    </div>
+  );
+
   return (
-    <Form
-      form={form}
-      onFinish={handleSubmitCreate}
-      onFinishFailed={() => toast.error("Vui lòng nhập đầy đủ thông tin")}
-      className="border p-2 rounded-md mb-2"
+    <Modal
+      title={<Title level={4} style={{ margin: 0 }}>{item ? "Cập nhật món ăn" : "Thêm món ăn mới"}</Title>}
+      open={open}
+      onCancel={onCancel}
+      width={700}
+      footer={[
+        <Button key="cancel" onClick={onCancel} size="large">Hủy</Button>,
+        <Button key="submit" type="primary" size="large" onClick={form.submit} className="bg-orange-600 hover:bg-orange-500 border-none shadow-orange-200 shadow-md">
+          {item ? "Cập nhật" : "Thêm mới"}
+        </Button>
+      ]}
+      style={{ top: 20 }}
     >
-      <div className="grid grid-cols-4 grid-rows-4 gap-6 mb-10">
-        <div className="row-span-4 flex items-center  justify-center flex-col">
-          <Image
-            width={250}
-            height={180}
-            objectfit="cover"
-            className="rounded-lg"
-            src={selectedImage || images.img_default}
-            alt="..."
-          />
-          <button
-            type="button"
-            onClick={handleChooseImage}
-            className="mt-2 p-1 bg-[var(--primary)] text-white rounded text-[15px]"
-          >
-            Chọn ảnh
-          </button>
-          <input
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            onChange={handleImageChange}
-            style={{ display: "none" }}
-          />
-        </div>
-        <div className="col-span-3">
-          <Form.Item
-            name="arr_Menu_Group_Id"
-            rules={[
-              {
-                required: true,
-                message: "Yêu cầu chọn nhóm món ăn!",
-              },
-            ]}
-          >
-            <Select
-              onFocus={handleGetValueMenuGroup}
-              mode="multiple"
-              allowClear
-              style={{
-                width: "100%",
-              }}
-              placeholder="Yêu cầu chọn nhóm món ăn"
-              onChange={(value) =>
-                setValueInput((prev) => ({ ...prev, arr_Menu_Group_Id: value }))
-              }
-              options={
-                Array.isArray(data) && data.length > 0
-                  ? data.map((item) => ({ label: item?.name, value: item?.id }))
-                  : []
-              }
-              filterOption={(input, option) =>
-                option.label.toLowerCase().includes(input.toLowerCase())
-              }
-            />
-          </Form.Item>
-        </div>
-        <div className="col-span-3 col-start-2 row-start-2">
-          <Form.Item
-            label="Tên món ăn"
-            name="dish_Name"
-            layout="vertical"
-            rules={[
-              {
-                required: true,
-                message: "Yêu cầu nhập Tên món ăn!",
-              },
-            ]}
-          >
-            <Input
-              onChange={(e) =>
-                setValueInput((prev) => ({
-                  ...prev,
-                  Dish_Name: e.target.value,
-                }))
-              }
-            />
-          </Form.Item>
-        </div>
-        <div className="col-start-2 row-start-3">
-          <Form.Item
-            label="Đơn vị"
-            name="unit_Name"
-            layout="vertical"
-            rules={[
-              {
-                required: true,
-                message: "Yêu cầu nhâp đơn vị!",
-              },
-            ]}
-          >
-            <Input
-              value={valueInput.Unit_Name}
-              onChange={(e) =>
-                setValueInput((prev) => ({
-                  ...prev,
-                  Unit_Name: e.target.value,
-                }))
-              }
-            />
-          </Form.Item>
-        </div>
-        <div className="col-start-3 row-start-3">
-          {isUpdate ? (
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        className="mt-4"
+      >
+        <div className="flex gap-6">
+          {/* Left Column: Image Upload */}
+          <div className="flex flex-col items-center w-48 shrink-0">
+            <div className="mb-2 font-medium text-gray-700">Hình ảnh món</div>
+            <Upload
+              name="avatar"
+              listType="picture-card"
+              className="avatar-uploader"
+              showUploadList={false}
+              beforeUpload={beforeUpload}
+              onChange={handleImageChange}
+              fileList={fileList}
+            >
+              {imageUrl && imageUrl !== images.img_default ? (
+                <div className="relative w-full h-full group rounded-lg overflow-hidden">
+                  <img src={imageUrl} alt="dish" className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                    Thay đổi
+                  </div>
+                </div>
+              ) : (
+                uploadButton
+              )}
+            </Upload>
+            {imageUrl && imageUrl !== images.img_default && (
+              <Button type="text" danger size="small" icon={<DeleteOutlined />} onClick={(e) => {
+                e.stopPropagation();
+                setImageUrl(images.img_default);
+                setFileList([]);
+              }}>Xóa ảnh</Button>
+            )}
+          </div>
+
+          {/* Right Column: Inputs */}
+          <div className="flex-1">
             <Form.Item
-              label="Giá bán"
-              // name="selling_Price"
-              layout="vertical"
-              rules={[
-                {
-                  required: true,
-                  message: "Vui lòng nhập giá bán!",
-                },
-              ]}
+              name="dish_Name"
+              label="kên món ăn"
+              rules={[{ required: true, message: 'Vui lòng nhập tên món!' }]}
+            >
+              <Input size="large" placeholder="Ví dụ: Cơm gà xối mỡ" />
+            </Form.Item>
+
+            <Form.Item
+              name="arr_Menu_Group_Id"
+              label="Nhóm thực đơn"
+              rules={[{ required: true, message: 'Vui lòng chọn nhóm thực đơn!' }]}
             >
               <Select
-                placeholder="Chọn giá hoặc nhập mới"
-                onChange={handleSelectChange}
-                value={
-                  priceDish ||
-                  items.list_price.find((price) => price.status === true)
-                    ?.selling_price ||
-                  null
+                mode="multiple"
+                size="large"
+                placeholder="Chọn nhóm món..."
+                options={menuGroups?.map(g => ({ label: g.name, value: g.id }))}
+                filterOption={(input, option) =>
+                  (option?.label ?? '').toLowerCase().includes(input.toLowerCase())
                 }
-                dropdownRender={(menu) => (
-                  <>
-                    {menu}
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        padding: "8px",
-                      }}
-                    >
-                      <InputNumber
-                        style={{ flex: 1 }}
-                        value={inputValue}
-                        placeholder="Nhập giá mới"
-                        formatter={formatter} // Áp dụng formatter để hiển thị dấu phân cách
-                        parser={parser} // Xóa dấu phân cách khi nhập
-                        min={0} // Giá trị tối thiểu là 0
-                        step={1000} // Bước nhảy 1000 mỗi lần
-                        precision={0} // Làm tròn giá trị
-                        onChange={(e) => setInputValue(e)}
-                      />
-                      <a
-                        style={{ flexShrink: 0, marginLeft: 8 }}
-                        onClick={handleAddPrice}
-                      >
-                        + Thêm
-                      </a>
-                    </div>
-                  </>
-                )}
-              >
-                {Array.isArray(options) &&
-                  options.map((price) => (
-                    <Option key={price.price_id} value={price.selling_price}>
-                      <div className="flex justify-between">
-                        <span>
-                          {validatePriceVND("" + price.selling_price)} đ {""}
-                          {price.status && <Tag color="green">Hiện tại</Tag>}
-                        </span>
-                        {!price.status && (
-                          <Tag
-                            onClick={(e) => handleDeletePrice(e, price)}
-                            color="red"
-                          >
-                            Xóa giá
-                          </Tag>
-                        )}
-                      </div>
-                    </Option>
-                  ))}
-              </Select>
-            </Form.Item>
-          ) : (
-            <Form.Item
-              label="Giá bán"
-              name="selling_Price"
-              layout="vertical"
-              rules={[
-                {
-                  required: true,
-                  message: "Vui lòng nhập giá bán!",
-                },
-              ]}
-            >
-              <InputNumber
-                value={valueInput}
-                onChange={(value) =>
-                  setValueInput((prev) => ({
-                    ...prev,
-                    Selling_Price: value,
-                  }))
-                }
-                style={{ width: "100%" }}
-                formatter={formatter} // Áp dụng formatter để hiển thị dấu phân cách
-                parser={parser} // Xóa dấu phân cách khi nhập
-                min={0} // Giá trị tối thiểu là 0
-                step={1000} // Bước nhảy 1000 mỗi lần
-                precision={0} // Làm tròn giá trị
               />
             </Form.Item>
-          )}
+
+            <div className="grid grid-cols-2 gap-4">
+              <Form.Item
+                name="selling_Price"
+                label="Giá bán"
+                rules={[{ required: true, message: 'Nhập giá bán!' }]}
+              >
+                {/* If updating, show Select to manage multiple prices, if creating, simple InputNumber */}
+                {item ? (
+                  <Select
+                    placeholder="Chọn hoặc nhập giá"
+                    size="large"
+                    dropdownRender={(menu) => (
+                      <>
+                        {menu}
+                        <Divider style={{ margin: '8px 0' }} />
+                        <Space style={{ padding: '0 8px 4px' }}>
+                          <InputNumber
+                            placeholder="Thêm giá"
+                            value={newPriceInput}
+                            onChange={setNewPriceInput}
+                            formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                            style={{ width: 120 }}
+                          />
+                          <Button type="text" icon={<PlusOutlined />} onClick={addItem}>Thêm</Button>
+                        </Space>
+                      </>
+                    )}
+                  >
+                    {priceOptions.map(price => (
+                      <Option key={price.price_id || price.selling_price} value={price.selling_price}>
+                        <div className="flex justify-between items-center w-full">
+                          <span>{validatePriceVND(String(price.selling_price))} đ {price.status && <Tag color="green" className="ml-2">Hiện tại</Tag>}</span>
+                          {!price.status && (
+                            <DeleteOutlined
+                              className="text-red-400 hover:text-red-600"
+                              onClick={(e) => handleDeletePrice(e, price)}
+                            />
+                          )}
+                        </div>
+                      </Option>
+                    ))}
+                  </Select>
+                ) : (
+                  <InputNumber
+                    className="w-full"
+                    size="large"
+                    formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                    min={0}
+                    placeholder="0"
+                  />
+                )}
+              </Form.Item>
+
+              <Form.Item
+                name="origin_Price"
+                label="Giá gốc"
+              >
+                <InputNumber
+                  className="w-full"
+                  size="large"
+                  formatter={value => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                  parser={value => value.replace(/\$\s?|(,*)/g, '')}
+                  min={0}
+                  placeholder="0"
+                />
+              </Form.Item>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <Form.Item name="unit_Name" label="Đơn vị tính" rules={[{ required: true, message: 'Nhập đơn vị!' }]}>
+                <Input size="large" placeholder="Ví dụ: Đĩa, Tô, Phần" />
+              </Form.Item>
+              <Form.Item name="order" label="Thứ tự hiển thị">
+                <InputNumber className="w-full" size="large" min={1} />
+              </Form.Item>
+            </div>
+
+            <div className="flex gap-8 mt-2">
+              <Form.Item name="status" valuePropName="checked" noStyle>
+                <Checkbox>Đang kinh doanh</Checkbox>
+              </Form.Item>
+              <Form.Item name="is_Hot" valuePropName="checked" noStyle>
+                <Checkbox><span className="text-orange-500 font-medium">🔥 Món Bán chạy (Hot)</span></Checkbox>
+              </Form.Item>
+            </div>
+          </div>
         </div>
-        <div className="col-start-4 row-start-3">
-          <Form.Item label="Giá gốc" name="origin_Price" layout="vertical">
-            <InputNumber
-              value={valueInput}
-              onChange={(value) =>
-                setValueInput((prev) => ({
-                  ...prev,
-                  Origin_Price: value,
-                }))
-              }
-              style={{ width: "100%" }}
-              formatter={formatter}
-              parser={parser}
-              min={0}
-              step={1000}
-              precision={0}
-            />
-          </Form.Item>
-        </div>
-        <div className="col-start-2 row-start-4">
-          <Form.Item label="Thứ tự hiển thị" name="order" layout="vertical">
-            <InputNumber
-              value={valueInput}
-              onChange={(value) =>
-                setValueInput((prev) => ({
-                  ...prev,
-                  Order: value,
-                }))
-              }
-              style={{ width: "100%" }}
-              min={0}
-              precision={0}
-            />
-          </Form.Item>
-        </div>
-        <div className="col-start-3 row-start-4 flex items-end">
-          <Form.Item
-            label="Thứ tự hiển thị"
-            layout="vertical"
-            name="status"
-            valuePropName="checked"
-          >
-            <Checkbox
-              // checked={items ?? items.status}
-              onChange={(e) =>
-                setValueInput((prev) => ({
-                  ...prev,
-                  Status: e.target.checked,
-                }))
-              }
-            >
-              Hiển thị
-            </Checkbox>
-          </Form.Item>
-        </div>
-        <div className="col-start-4 row-start-4 flex items-end">
-          <Form.Item
-            label="Sản phẩm bán chạy"
-            name="is_Hot"
-            layout="vertical"
-            valuePropName="checked"
-          >
-            <Checkbox
-              checked={false}
-              onChange={(e) =>
-                setValueInput((prev) => ({
-                  ...prev,
-                  Status: e.target.checked,
-                }))
-              }
-            >
-              Sản phẩm bán chạy
-            </Checkbox>
-          </Form.Item>
-        </div>
-      </div>
-      <Form.Item className="flex justify-end mr-4 ">
-        <Button
-          className="p-4 bg-[var(--bg-btn-delete)] text-[var(--textlight)] mr-10"
-          onClick={handleCleanForm}
-        >
-          <FiDelete />
-        </Button>
-        <Button
-          className="p-4 bg-[var(--primary)] text-[var(--textlight)]"
-          htmlType="submit"
-        >
-          <MdAddCircleOutline />
-          {isUpdate ? "Cập nhật" : "Thêm món ăn"}
-        </Button>
-      </Form.Item>
-    </Form>
+      </Form>
+    </Modal>
   );
 }
 
 CreateDish.propTypes = {
-  items: PropTypes.object,
+  open: PropTypes.bool,
+  onCancel: PropTypes.func,
+  item: PropTypes.object
 };
+
 export default memo(CreateDish);
+

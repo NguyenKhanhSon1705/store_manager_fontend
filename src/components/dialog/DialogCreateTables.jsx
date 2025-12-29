@@ -1,129 +1,136 @@
-import { Fragment, memo, useEffect, useState } from "react";
-import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
-import Dialog from "@mui/material/Dialog";
-import DialogActions from "@mui/material/DialogActions";
-import DialogContent from "@mui/material/DialogContent";
-import DialogTitle from "@mui/material/DialogTitle";
-import SelectBox from "../selectBox/SelectBox";
+import { memo, useEffect } from "react";
+import {
+  Modal,
+  Form,
+  Input,
+  Select,
+  Checkbox,
+  InputNumber,
+  Typography,
+} from "antd";
 import { useDispatch, useSelector } from "react-redux";
 import { getListAreas } from "../../store/actions/areasAction";
-import { Checkbox, FormControlLabel } from "@mui/material";
-import { removeDotsVND, validatePriceVND } from "../../utils/validatePriceVND";
 import PropTypes from "prop-types";
 
-function DialogCreateTables({ title, open, onClose, onSubmit, items = [] }) {
+const { Title } = Typography;
+
+function DialogCreateTables({ title, open, onClose, onSubmit, items = null }) {
   const dispatch = useDispatch();
-  const { data } = useSelector((state) => state.area);
-
-  const [hasHourlyRate, sethasHourlyRate] = useState(!!items?.hasHourlyRate); // Đảm bảo giá trị ban đầu luôn là boolean
-
-  const [priceOfMunite, setpriceOfMunite] = useState("");
-  const [areaId, setareaId] = useState(0);
-  const [nameTable, setnameTable] = useState("");
-
-
+  const [form] = Form.useForm();
+  const { data: areas } = useSelector((state) => state.area);
 
   useEffect(() => {
-    dispatch(getListAreas());
-  }, [dispatch]);
+    if (open) {
+      dispatch(getListAreas());
+      if (items) {
+        form.setFieldsValue({
+          areaId: items.areaId,
+          nameTable: items.nameTable,
+          hasHourlyRate: !!items.hasHourlyRate,
+          priceOfMunite: items.priceOfMunite || 0,
+        });
+      } else {
+        form.resetFields();
+      }
+    }
+  }, [open, items, form, dispatch]);
 
-//   useEffect(() => {
-//     if (items) {
-//       sethasHourlyRate(!!items.hasHourlyRate); // Chuyển đổi giá trị thành boolean
-//       setpriceOfMunite(validatePriceVND("" + items.priceOfMunite));
-//       setareaId(items.areaId);
-//       setnameTable(items.nameTable);
-//     }
-//   }, [items]);
+  const onFinish = (values) => {
+    onSubmit({
+      ...values,
+      id: items?.id || "",
+    });
+    onClose();
+  };
 
   return (
-    <Fragment>
-      <Dialog
-        open={open}
-        onClose={onClose}
-        PaperProps={{
-          component: "form",
-          onSubmit: (event) => {
-            event.preventDefault();
-            onClose();
-            onSubmit({
-              id: items?.id || "",
-              areaId,
-              hasHourlyRate,
-              priceOfMunite: removeDotsVND(priceOfMunite) || 0,
-              nameTable,
-            });
-          },
-        }}
-        fullWidth
+    <Modal
+      title={<Title level={4} style={{ margin: 0 }}>{title}</Title>}
+      open={open}
+      onCancel={onClose}
+      onOk={() => form.submit()}
+      okText={items ? "Cập nhật" : "Thêm mới"}
+      cancelText="Hủy"
+      width={500}
+      centered
+      okButtonProps={{
+        className: "bg-orange-600 hover:bg-orange-500 border-none px-6"
+      }}
+    >
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={onFinish}
+        className="mt-6"
+        initialValues={{ hasHourlyRate: false, priceOfMunite: 0 }}
       >
-        <DialogTitle textAlign={"center"}>{title}</DialogTitle>
-        <DialogContent content="center">
-          <SelectBox
-            fullWidth={true}
-            data={data}
-            valueName="areaName"
-            keyName="id"
-            label="Khu vực"
-            onChange={(value) => setareaId(value)}
-            defaultValue={areaId}
+        <Form.Item
+          name="areaId"
+          label="Khu vực"
+          rules={[{ required: true, message: "Vui lòng chọn khu vực!" }]}
+        >
+          <Select
+            placeholder="Chọn khu vực..."
+            size="large"
+            options={areas?.map((area) => ({
+              label: area.areaName,
+              value: area.id,
+            }))}
           />
+        </Form.Item>
 
-          <TextField
-            autoFocus={true}
-            required={true}
-            label={"Tên bàn"}
-            type={"text"}
-            value={nameTable}
-            onChange={(e) => setnameTable(e.target.value)}
-            fullWidth
-            variant="standard"
-            margin="dense"
-          />
+        <Form.Item
+          name="nameTable"
+          label="Tên bàn / Phòng"
+          rules={[{ required: true, message: "Vui lòng nhập tên bàn!" }]}
+        >
+          <Input size="large" placeholder="Ví dụ: Bàn 01, VIP 1..." />
+        </Form.Item>
 
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={hasHourlyRate} // Luôn nhận giá trị từ trạng thái
-                onChange={() => sethasHourlyRate(!hasHourlyRate)}
-              />
-            }
-            label="Bàn tính giá theo giờ"
-          />
+        <Form.Item name="hasHourlyRate" valuePropName="checked" noStyle>
+          <Checkbox className="mb-4">Bàn tính giá theo giờ</Checkbox>
+        </Form.Item>
 
-          {hasHourlyRate && (
-            <TextField
-              autoFocus={true}
-              required={true}
-              label={"Giá bàn (VNĐ/Phút)"}
-              type={"text"}
-              value={priceOfMunite}
-              onChange={(e) =>
-                setpriceOfMunite(validatePriceVND(e.target.value))
-              }
-              fullWidth
-              variant="standard"
-              margin="dense"
-            />
-          )}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={onClose}>Cancel</Button>
-          <Button className="!bg-[var(--primary)] !text-white" type="submit">
-            Gửi
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Fragment>
+        <Form.Item
+          noStyle
+          shouldUpdate={(prevValues, currentValues) =>
+            prevValues.hasHourlyRate !== currentValues.hasHourlyRate
+          }
+        >
+          {({ getFieldValue }) =>
+            getFieldValue("hasHourlyRate") ? (
+              <Form.Item
+                name="priceOfMunite"
+                label="Giá bàn (VNĐ/Phút)"
+                rules={[{ required: true, message: "Vui lòng nhập giá!" }]}
+                className="mt-4"
+              >
+                <InputNumber
+                  className="w-full"
+                  size="large"
+                  min={0}
+                  formatter={(value) =>
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                  }
+                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+                  placeholder="0"
+                />
+              </Form.Item>
+            ) : null
+          }
+        </Form.Item>
+      </Form>
+    </Modal>
   );
 }
 
 DialogCreateTables.propTypes = {
   title: PropTypes.string,
   open: PropTypes.bool,
-  items: PropTypes.object, // hoặc PropTypes.arrayOf(PropTypes.object) nếu bạn muốn chi tiết hơn
+  items: PropTypes.object,
   onClose: PropTypes.func.isRequired,
   onSubmit: PropTypes.func.isRequired,
 };
+
 export default memo(DialogCreateTables);
+

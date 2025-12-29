@@ -1,81 +1,50 @@
-import { IoHeart, IoHeartOutline } from "react-icons/io5";
-import { useState } from "react";
-import Card from "~/components/card";
+import { Badge, Tag } from "antd";
 
-// eslint-disable-next-line react/prop-types
-const NftCard = ({ title, quantity, price, image, extra }) => {
-  const [heart, setHeart] = useState(true);
+const NftCard = ({ title, quantity, price, image, extra = "" }) => {
   return (
-    <Card
-      extra={`flex flex-col w-full h-full !p-4 3xl:p-![18px] bg-white ${extra}`}
-    >
-      <div className="h-full w-full">
-        <div className="relative w-full">
-          <img
-            src={image}
-            className="mb-3 h-full w-full rounded-xl 3xl:h-full 3xl:w-full"
-            alt=""
-          />
-          <button
-            onClick={() => setHeart(!heart)}
-            className="absolute top-3 right-3 flex items-center justify-center rounded-full bg-white p-2 text-brand-500 hover:cursor-pointer"
-          >
-            <div className="flex h-full w-full items-center justify-center rounded-full text-xl hover:bg-gray-50 dark:text-navy-900">
-              {heart ? (
-                <IoHeartOutline />
-              ) : (
-                <IoHeart className="text-brand-500" />
-              )}
-            </div>
-          </button>
+    <div className={`bg-white dark:bg-navy-800 rounded-3xl overflow-hidden border border-gray-100 dark:border-navy-700 shadow-sm hover:shadow-xl transition-all duration-300 group flex flex-col h-full ${extra}`}>
+      <div className="relative h-48 overflow-hidden">
+        <img
+          src={image}
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+          alt={title}
+        />
+        <div className="absolute top-3 right-3">
+          <Badge count={`Top Sale`} style={{ backgroundColor: '#F97316' }} />
+        </div>
+      </div>
+
+      <div className="p-5 flex flex-col flex-1">
+        <div className="flex justify-between items-start mb-2">
+          <h4 className="text-lg font-bold text-gray-800 dark:text-white line-clamp-1 group-hover:text-orange-500 transition-colors">
+            {title}
+          </h4>
         </div>
 
-        <div className="mb-3 flex items-center justify-between px-1 md:flex-col md:items-start lg:flex-row lg:justify-between xl:flex-col xl:items-start 3xl:flex-row 3xl:justify-between">
-          <div className="mb-2">
-            <p className="text-lg font-bold text-navy-700 dark:text-white">
-              {" "}
-              {title}{" "}
-            </p>
-            <p className="mt-1 text-sm font-medium text-gray-600 md:mt-2">
-              Đã bán: {quantity}{" "}
-            </p>
-          </div>
+        <div className="flex items-center gap-2 mb-4">
+          <Tag color="orange" className="rounded-full border-none px-3">
+            Đã bán: <span className="font-bold">{quantity}</span>
+          </Tag>
+        </div>
 
-          {/* <div className="flex flex-row-reverse md:mt-2 lg:mt-0">
-            <span className="z-0 ml-px inline-flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-[#E0E5F2] text-xs text-navy-700 dark:!border-navy-800 dark:bg-gray-800 dark:text-white">
-              +5
+        <div className="mt-auto pt-4 border-t border-gray-50 dark:border-navy-700 flex items-center justify-between">
+          <div className="flex flex-col">
+            <span className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold mb-0.5">Giá hiện tại</span>
+            <span className="text-lg font-black text-orange-600 dark:text-orange-400">
+              {price}
             </span>
-            {bidders.map((avt, key) => (
-              <span
-                key={key}
-                className="z-10 -mr-3 h-8 w-8 rounded-full border-2 border-white dark:!border-navy-800"
-              >
-                <img
-                  className="h-full w-full rounded-full object-cover"
-                  src={avt}
-                  alt=""
-                />
-              </span>
-            ))}
-          </div> */}
-        </div>
-
-        <div className="flex items-center justify-between md:flex-col md:items-start lg:flex-row lg:justify-between xl:flex-col 2xl:items-start 3xl:flex-row 3xl:items-center 3xl:justify-between">
-          <div className="flex">
-            <p className="mb-2 text-sm font-bold text-red-500 dark:text-white">
-              Giá bán hiện tại: {price}
-            </p>
           </div>
-          <button
-            href=""
-            className="linear rounded-[20px] bg-brand-900 px-4 py-2 text-base font-medium text-white transition duration-200 hover:bg-brand-800 active:bg-brand-700 dark:bg-brand-400 dark:hover:bg-brand-300 dark:active:opacity-90"
-          >
-            Xem thêm
+
+          <button className="h-10 w-10 flex items-center justify-center rounded-xl bg-orange-50 text-orange-500 hover:bg-orange-500 hover:text-white transition-all duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
           </button>
         </div>
       </div>
-    </Card>
+    </div>
   );
 };
 
 export default NftCard;
+

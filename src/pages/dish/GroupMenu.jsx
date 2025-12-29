@@ -1,16 +1,14 @@
-import { TextField } from "@mui/material";
 import { useCallback, useLayoutEffect, useState } from "react";
 import { FaRegEdit } from "react-icons/fa";
-import { MdAdd, MdDeleteOutline } from "react-icons/md";
+import { MdAdd, MdDeleteOutline, MdSearch } from "react-icons/md";
+
 import { useDispatch, useSelector } from "react-redux";
 import "react-toastify/dist/ReactToastify.css";
-import { Modal, Pagination, Select } from "antd";
+import { Modal, Pagination, Table, Input, Button, Tag, Tooltip, Card, Space } from "antd";
 
 import images from "../../assets/images";
-import Button from "../../components/buttons/Button";
 import DialogMenuGroup from "../../components/dialog/DialogMenuGroup";
 import Breadcrumb from "../../components/helper/Breadcrumb";
-import LoadingSkeleton from "../../components/loading/LoadingSkeleton";
 import {
   createMenuGroup,
   deleteMenuGroup,
@@ -18,8 +16,10 @@ import {
   updateMenuGroup,
 } from "../../store/actions/menuGroupAction";
 import LoadingSyncLoader from "../../components/loading/LoadingSyncLoader";
+import useDebounce from "../../hook/useDebounce"; // Assuming you have this hook based on Dish.jsx
 
 const { confirm } = Modal;
+
 function GroupMenu() {
   const dispatch = useDispatch();
   const { data, loading, update } = useSelector((state) => state.menuGroup);
@@ -27,20 +27,21 @@ function GroupMenu() {
   const [showPage, setShowPage] = useState({
     pageIndex: 1,
     search: "",
-    limit: 5,
-    index: 1,
+    limit: 10, // Default to 10 for Table
   });
 
-  useLayoutEffect(() => {
-    dispatch(getAllMenuGroup(showPage));
-  }, [showPage, dispatch]);
+  const debouncedSearch = useDebounce(showPage.search, 500);
 
-  const handleOpenCreate = (items) => {
+  useLayoutEffect(() => {
+    dispatch(getAllMenuGroup({ ...showPage, search: debouncedSearch || showPage.search }));
+  }, [showPage.pageIndex, showPage.limit, debouncedSearch, dispatch]);
+
+  const handleOpenCreate = (items = {}) => {
     setOpenDialog({ open: true, items: items });
   };
 
   const handleCloseDialog = useCallback(() => {
-    setOpenDialog({ open: false });
+    setOpenDialog({ open: false, items: {} });
   }, []);
 
   const handleSubmit = useCallback(
@@ -54,32 +55,108 @@ function GroupMenu() {
     [dispatch]
   );
 
-  const handleSubmitDelete = (items) => {
+  const handleSubmitDelete = (id) => {
     confirm({
-      title: "Bạn chắc chắn xóa nhóm món ăn này không ?",
+      title: "Xác nhận xóa",
+      content: "Bạn có chắc chắn muốn xóa nhóm món ăn này không?",
       okText: "Xóa",
       okType: "danger",
       cancelText: "Hủy",
       centered: true,
       onOk() {
-        dispatch(deleteMenuGroup(items));
+        dispatch(deleteMenuGroup(id));
       },
     });
   };
 
-  const handlePaging = (value) => {
+  const handleTableChange = (pagination) => {
     setShowPage((prev) => ({
       ...prev,
-      pageIndex: value,
-      index: showPage.limit * value - showPage.limit,
+      pageIndex: pagination.current,
+      limit: pagination.pageSize,
     }));
   };
-  const handleShowPage = (value) => {
-    setShowPage((prev) => ({ ...prev, limit: value, pageIndex: 1, index: 1 }));
-  };
+
+  const columns = [
+    {
+      title: "#",
+      key: "index",
+      width: 60,
+      align: "center",
+      render: (text, record, index) => {
+        return (showPage.pageIndex - 1) * showPage.limit + index + 1;
+      },
+    },
+    {
+      title: "Hình ảnh",
+      dataIndex: "image",
+      key: "image",
+      width: 120,
+      render: (image, record) => (
+        <div className="w-[80px] h-[50px] rounded-lg overflow-hidden border border-gray-200 shadow-sm">
+          <img
+            src={image || images.img_default}
+            alt={record.name}
+            className="w-full h-full object-cover"
+            onError={(e) => (e.target.src = images.img_default)}
+          />
+        </div>
+      ),
+    },
+    {
+      title: "Tên nhóm thực đơn",
+      dataIndex: "name",
+      key: "name",
+      render: (text) => <span className="font-semibold text-gray-700">{text}</span>,
+    },
+    {
+      title: "Thứ tự",
+      dataIndex: "order",
+      key: "order",
+      width: 100,
+      align: "center",
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      width: 150,
+      render: (status) => (
+        <Tag color={status ? "success" : "error"} className="px-3 py-1 rounded-full text-sm font-medium border-0">
+          {status ? "Hoạt động" : "Ngưng hoạt động"}
+        </Tag>
+      ),
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      width: 150,
+      align: "center",
+      render: (_, record) => (
+        <Space size="middle">
+          <Tooltip title="Chỉnh sửa">
+            <Button
+              type="text"
+              icon={<FaRegEdit size={18} />}
+              onClick={() => handleOpenCreate(record)}
+              className="text-blue-500 hover:text-blue-700 hover:bg-blue-50 rounded-full w-9 h-9 flex items-center justify-center p-0"
+            />
+          </Tooltip>
+          <Tooltip title="Xóa">
+            <Button
+              type="text"
+              icon={<MdDeleteOutline size={20} />}
+              onClick={() => handleSubmitDelete(record.id)}
+              className="text-red-500 hover:text-red-700 hover:bg-red-50 rounded-full w-9 h-9 flex items-center justify-center p-0"
+            />
+          </Tooltip>
+        </Space>
+      ),
+    },
+  ];
 
   return (
-    <div>
+    <div className="p-2 h-full flex flex-col gap-4">
       {update && <LoadingSyncLoader />}
 
       <DialogMenuGroup
@@ -89,136 +166,68 @@ function GroupMenu() {
         items={openDialog.items}
       />
 
-      <Breadcrumb items={[{ name: "Thông tin nhóm món", href: "" }]} />
+      {/* Header Section */}
+      <Card
+        bordered={false}
+        className="shadow-sm rounded-xl"
+        bodyStyle={{ padding: "12px 24px" }}
+      >
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+          <Breadcrumb items={[{ name: "Quản lý nhóm món", href: "" }]} />
 
-      <div className="flex justify-between mb-5">
-        <div className="flex items-center">
-          <Select
-            onChange={(e) => handleShowPage(e)}
-            defaultValue={5}
-            style={{ width: 100 }}
-            options={[
-              { value: 5, label: "5/Trang" },
-              { value: 10, label: "10/Trang" },
-              { value: 20, label: "20/Trang" },
-            ]}
-          />
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <Input
+              size="large"
+              placeholder="Tìm kiếm nhóm món..."
+              prefix={<MdSearch className="text-gray-400 text-xl" />}
+              value={showPage.search}
+              onChange={(e) => setShowPage((prev) => ({ ...prev, search: e.target.value }))}
+              className="min-w-[300px] rounded-xl border-gray-200 hover:border-orange-400 focus:border-orange-500"
+            />
+            <Button
+              type="primary"
+              size="large"
+              icon={<MdAdd size={20} />}
+              onClick={() => handleOpenCreate({})}
+              className="bg-gradient-to-r from-orange-500 to-red-500 border-0 hover:opacity-90 shadow-md shadow-orange-200 rounded-xl px-6 font-medium flex items-center"
+            >
+              Thêm mới
+            </Button>
+          </div>
         </div>
-        <div className="w-1/4 ">
-          <TextField
-            id="standard-basic"
-            label="Tìm kiếm"
-            fullWidth
-            variant="standard"
-            onChange={(e) =>
-              setShowPage((prev) => ({ ...prev, search: e.target.value }))
-            }
-            value={showPage.search}
-          />
-        </div>
-        <div className="mb-5 text-[18px]" aria-hidden>
-          <Button
-            onClick={handleOpenCreate}
-            rounded={true}
-            leftIcon={<MdAdd />}
-            className="flex items-center bg-[var(--bg-btn-add)] p-2 text-[var(--textlight)] rounded-sm"
-          >
-            Thêm
-          </Button>
-        </div>
-      </div>
-      <div className="relative overflow-x-auto sm:rounded-md">
-        <table className="w-full text-sm text-left rtl:text-right ">
-          <thead className="text-xs text-gray-700 uppercase bg-gray-50 ">
-            <tr>
-              <th scope="col" className="px-4 py-3">
-                #
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Tên thực đơn
-              </th>
-              <th scope="col" className="px-4 py-3">
-                Hình ảnh
-              </th>
-              <th scope="col" className="px-4 py-3 w-[15%]">
-                Thứ tự
-              </th>
-              <th scope="col" className="px-4 py-3 w-[15%]">
-                Trạng thái
-              </th>
-              <th scope="col" className="px-4 py-3 w-[15%]">
-                Thao tác
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading ? (
-              <tr>
-                <td colSpan="6" className="text-center">
-                  <LoadingSkeleton height={50} count={showPage.limit} />
-                </td>
-              </tr>
-            ) : (
-              data?.items?.length > 0 &&
-              data?.items.map((item, index) => {
-                return (
-                  <tr
-                    key={item?.id}
-                    className="odd:bg-gray-200 even:bg-white border-b "
-                  >
-                    <th
-                      scope="row"
-                      className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap"
-                    >
-                      {showPage.index + index + 1}
-                    </th>
-                    <td className="px-4 py-3">{item?.name}</td>
-                    <td className="px-4 py-3 ">
-                      <img
-                        className="w-[100px] h-[50px] object-cover rounded-md"
-                        src={item?.image || images.img_default}
-                        alt={item?.name}
-                      />
-                    </td>
-                    <td className="px-4 py-3 ">{item?.order}</td>
-                    <td className="px-4 py-3 ">
-                      {item?.status ? (
-                        <p className="flex w-1/4 h-5 me-3 ml-2 bg-green-500 rounded-full"></p>
-                      ) : (
-                        <p className="flex w-1/4 h-5 me-3 ml-2 bg-red-500 rounded-full"></p>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={() => handleOpenCreate(item)}
-                        className="font-medium p-2 text-white rounded-md text-[16px] mr-1 bg-[var(--bg-btn-edit)] hover:opacity-70 "
-                      >
-                        <FaRegEdit />
-                      </button>
-                      <button
-                        onClick={() => handleSubmitDelete(item?.id)}
-                        className="font-medium p-2 text-white rounded-md text-[16px]  ml-1 bg-[var(--bg-btn-delete)] hover:opacity-70"
-                      >
-                        <MdDeleteOutline />
-                      </button>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-        <div className="p-4 float-end">
-          <Pagination
-            defaultCurrent={showPage.pageIndex}
-            total={data.totalPages}
-            onChange={(value) => handlePaging(value)}
-            pageSize
-          />
-        </div>
-      </div>
+      </Card>
+
+      {/* Table Section */}
+      <Card
+        bordered={false}
+        className="shadow-sm rounded-xl flex-1 overflow-hidden flex flex-col"
+        bodyStyle={{ padding: 0, height: "100%", display: "flex", flexDirection: "column" }}
+      >
+        <Table
+          columns={columns}
+          dataSource={data?.items || []}
+          loading={loading}
+          rowKey="id"
+          pagination={{
+            current: showPage.pageIndex,
+            pageSize: showPage.limit,
+            total: data?.totalPages ? data.totalPages * showPage.limit : 0, // Estimating total items if API only returns totalPages
+            showSizeChanger: true,
+            pageSizeOptions: ["5", "10", "20", "50"],
+            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} mục`,
+          }}
+          onChange={handleTableChange}
+          scroll={{ y: 'calc(100vh - 280px)' }} // Sticky header and scrollable body
+          className="h-full"
+          rowClassName="hover:bg-orange-50 transition-colors duration-200 cursor-pointer"
+          onRow={(record) => ({
+            onClick: () => handleOpenCreate(record),
+          })}
+        />
+      </Card>
     </div>
   );
 }
 
 export default GroupMenu;
+

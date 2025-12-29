@@ -1,25 +1,30 @@
-import Card from "~/components/card";
+const Widget = ({ icon, title, subtitle, color = "orange" }) => {
+  const colorMap = {
+    orange: "from-orange-500 to-red-500",
+    blue: "from-blue-500 to-indigo-600",
+    green: "from-emerald-500 to-teal-600",
+    purple: "from-purple-500 to-pink-600",
+  };
 
-// eslint-disable-next-line react/prop-types
-const Widget = ({ icon, title, subtitle }) => {
+  const bgGradient = colorMap[color] || colorMap.orange;
+
   return (
-    <Card extra="!flex-row flex-grow items-center rounded-[8px] shadow-xl border">
-      <div className="ml-[18px] flex h-[90px] w-auto flex-row items-center">
-        <div className="rounded-full bg-gray-200 p-3 dark:bg-navy-700">
-          <span className="flex items-center text-brand-500 dark:text-white">
-            {icon}
-          </span>
-        </div>
+    <div className="bg-white dark:bg-navy-800 rounded-2xl p-4 shadow-sm hover:shadow-md transition-all border border-gray-100 dark:border-navy-700 flex items-center group">
+      <div className={`h-14 w-14 rounded-xl bg-gradient-to-br ${bgGradient} flex items-center justify-center text-white shadow-lg shadow-gray-200 dark:shadow-none transition-transform group-hover:scale-110`}>
+        {icon}
       </div>
 
-      <div className="h-50 ml-4 flex w-auto flex-col justify-center">
-        <p className="font-dm text-sm font-medium text-gray-700">{title}</p>
-        <h4 className="text-xl font-bold text-navy-700 dark:text-white">
+      <div className="ml-5">
+        <p className="text-sm font-semibold text-gray-500 dark:text-gray-400 capitalize mb-0.5">
+          {title}
+        </p>
+        <h4 className="text-xl font-bold text-gray-800 dark:text-white leading-none">
           {subtitle}
         </h4>
       </div>
-    </Card>
+    </div>
   );
 };
 
 export default Widget;
+
